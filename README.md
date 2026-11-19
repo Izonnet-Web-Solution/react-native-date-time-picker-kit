@@ -524,7 +524,7 @@ Available error codes:
 
 | Library Version | React Native | iOS | Android | New Architecture |
 | :--- | :--- | :--- | :--- | :--- |
-| `0.1.0` | `0.74.0` – `0.88.x+` | iOS 15.1+ | API 24+ (Android 7.0+) | **Yes (Required)** |
+| `1.0.0` | `0.74.0` – `0.88.x+` | iOS 15.1+ | API 24+ (Android 7.0+) | **Yes (Required)** |
 
 ---
 
