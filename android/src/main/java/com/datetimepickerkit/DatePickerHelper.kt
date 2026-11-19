@@ -21,9 +21,10 @@ class DatePickerHelper(
   private var isHandled = false
   private var datePickerDialog: DatePickerDialog? = null
   private val calendar = Calendar.getInstance()
+  private var initialTimestamp: Long = 0L
 
   fun show(): DatePickerDialog {
-    val initialTimestamp = if (options.hasKey("value") && !options.isNull("value")) {
+    initialTimestamp = if (options.hasKey("value") && !options.isNull("value")) {
       options.getDouble("value").toLong()
     } else {
       System.currentTimeMillis()

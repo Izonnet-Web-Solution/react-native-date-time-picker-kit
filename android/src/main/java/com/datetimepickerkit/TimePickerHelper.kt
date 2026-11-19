@@ -23,9 +23,10 @@ class TimePickerHelper(
   private val calendar = Calendar.getInstance()
   private var currentHour = 0
   private var currentMinute = 0
+  private var initialTimestamp: Long = 0L
 
   fun show(): TimePickerDialog {
-    val initialTimestamp = if (options.hasKey("value") && !options.isNull("value")) {
+    initialTimestamp = if (options.hasKey("value") && !options.isNull("value")) {
       options.getDouble("value").toLong()
     } else {
       System.currentTimeMillis()
