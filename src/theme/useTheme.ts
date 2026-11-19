@@ -43,11 +43,34 @@ export function resolveTheme(
     return baseTheme;
   }
 
+  const mappedColors = {
+    ...config?.colors,
+    ...(config?.themeColors?.backgroundColor && {
+      background: config.themeColors.backgroundColor,
+      modalBackground: config.themeColors.backgroundColor,
+    }),
+    ...(config?.themeColors?.textColor && {
+      text: config.themeColors.textColor,
+    }),
+    ...(config?.themeColors?.selectedTextColor && {
+      selectedText: config.themeColors.selectedTextColor,
+    }),
+    ...(config?.themeColors?.accentColor && {
+      accent: config.themeColors.accentColor,
+      primary: config.themeColors.accentColor,
+      selected: config.themeColors.accentColor,
+    }),
+    ...(config?.themeColors?.dividerColor && {
+      divider: config.themeColors.dividerColor,
+      border: config.themeColors.dividerColor,
+    }),
+  };
+
   return {
     mode,
     colors: {
       ...baseTheme.colors,
-      ...config.colors,
+      ...mappedColors,
     },
     typography: {
       ...defaultTypography,

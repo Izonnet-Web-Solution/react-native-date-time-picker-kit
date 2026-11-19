@@ -16,26 +16,79 @@ export function getDeviceLocale(): string {
   return 'en';
 }
 
+function getIntlLocaleData(localeCode: string): LocaleData {
+  const base = enLocale;
+  try {
+    if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+      const months: string[] = [];
+      const monthsShort: string[] = [];
+      for (let m = 0; m < 12; m++) {
+        const d = new Date(2026, m, 1);
+        months.push(
+          new Intl.DateTimeFormat(localeCode, { month: 'long' }).format(d)
+        );
+        monthsShort.push(
+          new Intl.DateTimeFormat(localeCode, { month: 'short' }).format(d)
+        );
+      }
+
+      const weekdays: string[] = [];
+      const weekdaysShort: string[] = [];
+      const weekdaysMin: string[] = [];
+      // 2026-11-15 was Sunday
+      for (let w = 0; w < 7; w++) {
+        const d = new Date(2026, 10, 15 + w);
+        weekdays.push(
+          new Intl.DateTimeFormat(localeCode, { weekday: 'long' }).format(d)
+        );
+        weekdaysShort.push(
+          new Intl.DateTimeFormat(localeCode, { weekday: 'short' }).format(d)
+        );
+        weekdaysMin.push(
+          new Intl.DateTimeFormat(localeCode, { weekday: 'narrow' }).format(d)
+        );
+      }
+
+      return {
+        ...base,
+        code: localeCode,
+        months,
+        monthsShort,
+        weekdays,
+        weekdaysShort,
+        weekdaysMin,
+      };
+    }
+  } catch {
+    // fallback to base English
+  }
+  return { ...base, code: localeCode };
+}
+
 export function resolveLocale(
   localeInput?: string | PartialLocaleData | null
 ): LocaleData {
   if (!localeInput) {
     const devLocale = getDeviceLocale();
     const langCode = devLocale.split('-')[0]?.toLowerCase() || 'en';
-    const base = BUILTIN_LOCALES[langCode] || enLocale;
+    const base = BUILTIN_LOCALES[langCode] || getIntlLocaleData(devLocale);
     return { ...base, code: devLocale };
   }
 
   if (typeof localeInput === 'string') {
     const langCode = localeInput.split('-')[0]?.toLowerCase() || 'en';
     const base =
-      BUILTIN_LOCALES[langCode] || BUILTIN_LOCALES[localeInput] || enLocale;
+      BUILTIN_LOCALES[langCode] ||
+      BUILTIN_LOCALES[localeInput] ||
+      getIntlLocaleData(localeInput);
     return { ...base, code: localeInput };
   }
 
   // It's a custom PartialLocaleData object
   const langCode = localeInput.code?.split('-')[0]?.toLowerCase() || 'en';
-  const base = BUILTIN_LOCALES[langCode] || enLocale;
+  const base =
+    BUILTIN_LOCALES[langCode] ||
+    (localeInput.code ? getIntlLocaleData(localeInput.code) : enLocale);
 
   return {
     ...base,
@@ -83,11 +136,18 @@ export function useLocale(
 export function formatLocalized(
   date: Date,
   formatStr: string = 'YYYY-MM-DD',
-  locale: LocaleData = enLocale
+  localeInput: string | PartialLocaleData | LocaleData = enLocale
 ): string {
   if (isNaN(date.getTime())) {
     return '';
   }
+
+  const locale: LocaleData =
+    typeof localeInput === 'string' ||
+    !('months' in localeInput) ||
+    !Array.isArray((localeInput as any).months)
+      ? resolveLocale(localeInput as string | PartialLocaleData)
+      : (localeInput as LocaleData);
 
   const year = date.getFullYear();
   const month = date.getMonth(); // 0-11

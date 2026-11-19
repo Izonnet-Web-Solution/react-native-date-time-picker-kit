@@ -18,11 +18,13 @@ export interface ModalWrapperProps extends BaseModalProps {
   presentation?: PresentationMode;
   children: React.ReactNode;
   theme: ResolvedTheme;
+  isVisible?: boolean;
 }
 
 export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   presentation = 'modal',
   visible = false,
+  isVisible,
   onClose,
   children,
   theme,
@@ -31,6 +33,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   showHandle = true,
   closeOnBackdropPress = true,
 }) => {
+  const modalVisible = isVisible !== undefined ? isVisible : visible;
   if (presentation === 'inline') {
     return (
       <View
@@ -67,7 +70,7 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
   return (
     <Modal
       transparent={!isFullscreen}
-      visible={visible}
+      visible={modalVisible}
       animationType={effectiveAnim}
       onRequestClose={onClose}
       statusBarTranslucent
@@ -123,6 +126,11 @@ export const ModalWrapper: React.FC<ModalWrapperProps> = ({
                 </View>
               )}
               {children}
+              {isBottomSheet && (
+                <SafeAreaView
+                  style={{ backgroundColor: theme.colors.modalBackground }}
+                />
+              )}
             </View>
           </View>
         )}

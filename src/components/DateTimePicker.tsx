@@ -23,7 +23,10 @@ import type {
   OpenPickerOptions,
 } from '../types';
 import {
+  clampDate,
+  clampTime,
   dateToTimestamp,
+  normalizeDateWithTimezone,
   parseDate,
   timestampToDate,
 } from '../utils/dateConversion';
@@ -83,11 +86,48 @@ export const DateTimePicker = forwardRef<
     testID,
   } = props;
 
-  // Track internal date state
-  const initialDate = useMemo(
-    () => parseDate(propValue) || parseDate(defaultValue) || new Date(),
-    [propValue, defaultValue]
-  );
+  const effectiveMinDate = minimumDate ?? props.minDate;
+  const effectiveMaxDate = maximumDate ?? props.maxDate;
+  const effectiveTimeZone = props.timeZone ?? props.timeZoneName;
+  const effectiveOffsetMinutes =
+    timeZoneOffsetInMinutes !== undefined
+      ? timeZoneOffsetInMinutes
+      : props.utcOffset !== undefined
+        ? Math.abs(props.utcOffset) <= 14
+          ? props.utcOffset * 60
+          : props.utcOffset
+        : undefined;
+
+  const effectiveOpen =
+    propOpen !== undefined
+      ? propOpen
+      : props.isVisible !== undefined
+        ? props.isVisible
+        : props.visible !== undefined
+          ? props.visible
+          : undefined;
+
+  // Track internal date state with bounds clamping and timezone normalization
+  const initialDate = useMemo(() => {
+    let d = parseDate(propValue) || parseDate(defaultValue) || new Date();
+    if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
+      d = normalizeDateWithTimezone(
+        d,
+        effectiveTimeZone,
+        effectiveOffsetMinutes
+      );
+    }
+    const clamped = clampDate(d, effectiveMinDate, effectiveMaxDate);
+    return clamped ? clampTime(clamped, effectiveMinDate, effectiveMaxDate) : d;
+  }, [
+    propValue,
+    defaultValue,
+    effectiveTimeZone,
+    effectiveOffsetMinutes,
+    effectiveMinDate,
+    effectiveMaxDate,
+  ]);
+
   const [currentDate, setCurrentDate] = useState<Date>(initialDate);
   const isOpenRef = useRef<boolean>(false);
   const dateRef = useRef<Date>(currentDate);
@@ -97,12 +137,44 @@ export const DateTimePicker = forwardRef<
   const [dateTimeTab, setDateTimeTab] = useState<'date' | 'time'>('date');
   const [activePresetId, setActivePresetId] = useState<string | undefined>();
 
-  // Theme & Locale
-  const resolvedTheme: ResolvedTheme = useTheme(
-    typeof propTheme === 'object'
-      ? propTheme
-      : ({ mode: propTheme } as ThemeConfig)
-  );
+  // Theme & Locale with custom overrides
+  const themeInput = useMemo(() => {
+    let base: ThemeConfig =
+      typeof propTheme === 'object'
+        ? { ...propTheme }
+        : ({ mode: propTheme } as ThemeConfig);
+
+    if (props.themeColors) {
+      base = {
+        ...base,
+        themeColors: {
+          ...base.themeColors,
+          ...props.themeColors,
+        },
+      };
+    }
+    if (accentColor || textColor || backgroundColor) {
+      base = {
+        ...base,
+        colors: {
+          ...base.colors,
+          ...(accentColor && {
+            accent: accentColor,
+            primary: accentColor,
+            selected: accentColor,
+          }),
+          ...(textColor && { text: textColor }),
+          ...(backgroundColor && {
+            background: backgroundColor,
+            modalBackground: backgroundColor,
+          }),
+        },
+      };
+    }
+    return base;
+  }, [propTheme, props.themeColors, accentColor, textColor, backgroundColor]);
+
+  const resolvedTheme: ResolvedTheme = useTheme(themeInput);
   const localeData = useLocale(propLocale);
 
   // Keep dateRef synced
@@ -113,21 +185,38 @@ export const DateTimePicker = forwardRef<
   // Update if propValue changes
   useEffect(() => {
     if (propValue !== undefined && propValue !== null) {
-      const parsed = parseDate(propValue);
+      let parsed = parseDate(propValue);
       if (parsed) {
-        setCurrentDate(parsed);
-        dateRef.current = parsed;
+        if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
+          parsed = normalizeDateWithTimezone(
+            parsed,
+            effectiveTimeZone,
+            effectiveOffsetMinutes
+          );
+        }
+        const clamped = clampDate(parsed, effectiveMinDate, effectiveMaxDate);
+        const finalDate = clamped
+          ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
+          : parsed;
+        setCurrentDate(finalDate);
+        dateRef.current = finalDate;
       }
     }
-  }, [propValue]);
+  }, [
+    propValue,
+    effectiveTimeZone,
+    effectiveOffsetMinutes,
+    effectiveMinDate,
+    effectiveMaxDate,
+  ]);
 
   const buildNativeOptions = useCallback(
     (targetDate: Date): NativePickerOptions => {
-      const minTimestamp = minimumDate
-        ? dateToTimestamp(minimumDate)
+      const minTimestamp = effectiveMinDate
+        ? dateToTimestamp(effectiveMinDate)
         : undefined;
-      const maxTimestamp = maximumDate
-        ? dateToTimestamp(maximumDate)
+      const maxTimestamp = effectiveMaxDate
+        ? dateToTimestamp(effectiveMaxDate)
         : undefined;
 
       const nativeTheme: NativePickerTheme =
@@ -142,7 +231,7 @@ export const DateTimePicker = forwardRef<
         maximumDate: maxTimestamp ?? undefined,
         display,
         locale: typeof propLocale === 'string' ? propLocale : propLocale?.code,
-        timeZoneOffsetInMinutes,
+        timeZoneOffsetInMinutes: effectiveOffsetMinutes,
         is24Hour,
         minuteInterval,
         title,
@@ -155,11 +244,11 @@ export const DateTimePicker = forwardRef<
       };
     },
     [
-      minimumDate,
-      maximumDate,
+      effectiveMinDate,
+      effectiveMaxDate,
       display,
       propLocale,
-      timeZoneOffsetInMinutes,
+      effectiveOffsetMinutes,
       is24Hour,
       minuteInterval,
       title,
@@ -193,8 +282,8 @@ export const DateTimePicker = forwardRef<
       }
     }
 
-    if (minimumDate && maximumDate) {
-      if (!validateDateRange(minimumDate, maximumDate)) {
+    if (effectiveMinDate && effectiveMaxDate) {
+      if (!validateDateRange(effectiveMinDate, effectiveMaxDate)) {
         const err = new DateTimePickerError(
           'DATE_OUT_OF_RANGE',
           'minimumDate cannot be after maximumDate.'
@@ -290,8 +379,8 @@ export const DateTimePicker = forwardRef<
   }, [
     disabled,
     minuteInterval,
-    minimumDate,
-    maximumDate,
+    effectiveMinDate,
+    effectiveMaxDate,
     presentation,
     onOpen,
     buildNativeOptions,
@@ -409,13 +498,32 @@ export const DateTimePicker = forwardRef<
     return dateRef.current;
   }, []);
 
-  const setValue = useCallback((date: Date | number | string) => {
-    const parsed = parseDate(date);
-    if (parsed) {
-      setCurrentDate(parsed);
-      dateRef.current = parsed;
-    }
-  }, []);
+  const setValue = useCallback(
+    (date: Date | number | string) => {
+      let parsed = parseDate(date);
+      if (parsed) {
+        if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
+          parsed = normalizeDateWithTimezone(
+            parsed,
+            effectiveTimeZone,
+            effectiveOffsetMinutes
+          );
+        }
+        const clamped = clampDate(parsed, effectiveMinDate, effectiveMaxDate);
+        const finalDate = clamped
+          ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
+          : parsed;
+        setCurrentDate(finalDate);
+        dateRef.current = finalDate;
+      }
+    },
+    [
+      effectiveTimeZone,
+      effectiveOffsetMinutes,
+      effectiveMinDate,
+      effectiveMaxDate,
+    ]
+  );
 
   // Imperative handle
   useImperativeHandle(
@@ -442,12 +550,12 @@ export const DateTimePicker = forwardRef<
 
   // Declarative open prop support
   useEffect(() => {
-    if (propOpen === true && !isOpenRef.current) {
+    if (effectiveOpen === true && !isOpenRef.current) {
       openPicker().catch(() => {});
-    } else if (propOpen === false && isOpenRef.current) {
+    } else if (effectiveOpen === false && isOpenRef.current) {
       closePicker().catch(() => {});
     }
-  }, [propOpen, openPicker, closePicker]);
+  }, [effectiveOpen, openPicker, closePicker]);
 
   // Presets handling
   const presets = useMemo(() => {
@@ -460,29 +568,87 @@ export const DateTimePicker = forwardRef<
       setActivePresetId(preset.id);
       const val = preset.getValue();
       if (val instanceof Date) {
-        setCurrentDate(val);
-        dateRef.current = val;
-        onChange?.(val);
+        let updated = val;
+        if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
+          updated = normalizeDateWithTimezone(
+            updated,
+            effectiveTimeZone,
+            effectiveOffsetMinutes
+          );
+        }
+        const clamped = clampDate(updated, effectiveMinDate, effectiveMaxDate);
+        const finalDate = clamped
+          ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
+          : updated;
+        setCurrentDate(finalDate);
+        dateRef.current = finalDate;
+        onChange?.(finalDate);
       }
     },
-    [onChange]
+    [
+      effectiveTimeZone,
+      effectiveOffsetMinutes,
+      effectiveMinDate,
+      effectiveMaxDate,
+      onChange,
+    ]
   );
 
   const handleJsDateChange = useCallback(
     (newDate: Date) => {
       setActivePresetId(undefined);
-      setCurrentDate(newDate);
-      dateRef.current = newDate;
-      onChange?.(newDate);
+      let updated = newDate;
+      if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
+        updated = normalizeDateWithTimezone(
+          updated,
+          effectiveTimeZone,
+          effectiveOffsetMinutes
+        );
+      }
+      const clamped = clampDate(updated, effectiveMinDate, effectiveMaxDate);
+      const finalDate = clamped
+        ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
+        : updated;
+      setCurrentDate(finalDate);
+      dateRef.current = finalDate;
+      onChange?.(finalDate);
     },
-    [onChange]
+    [
+      effectiveTimeZone,
+      effectiveOffsetMinutes,
+      effectiveMinDate,
+      effectiveMaxDate,
+      onChange,
+    ]
   );
 
   const handleJsConfirm = useCallback(() => {
+    let finalDate = new Date(currentDate.getTime());
+    if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
+      finalDate = normalizeDateWithTimezone(
+        finalDate,
+        effectiveTimeZone,
+        effectiveOffsetMinutes
+      );
+    }
+    const clamped = clampDate(finalDate, effectiveMinDate, effectiveMaxDate);
+    const confirmedDate = clamped
+      ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
+      : finalDate;
+
     setIsJsModalVisible(false);
     isOpenRef.current = false;
-    onConfirm?.(currentDate);
-  }, [currentDate, onConfirm]);
+    onChange?.(confirmedDate);
+    onConfirm?.(confirmedDate);
+  }, [
+    currentDate,
+    effectiveTimeZone,
+    effectiveOffsetMinutes,
+    effectiveMinDate,
+    effectiveMaxDate,
+    onChange,
+    onConfirm,
+  ]);
 
   const handleJsCancel = useCallback(() => {
     setIsJsModalVisible(false);
@@ -609,8 +775,8 @@ export const DateTimePicker = forwardRef<
             <CalendarPicker
               value={currentDate}
               onChange={handleJsDateChange}
-              minimumDate={minimumDate}
-              maximumDate={maximumDate}
+              minimumDate={effectiveMinDate}
+              maximumDate={effectiveMaxDate}
               disabledDates={disabledDates}
               disabledWeekdays={disabledWeekdays}
               markedDates={markedDates}
@@ -641,8 +807,8 @@ export const DateTimePicker = forwardRef<
       <CalendarPicker
         value={currentDate}
         onChange={handleJsDateChange}
-        minimumDate={minimumDate}
-        maximumDate={maximumDate}
+        minimumDate={effectiveMinDate}
+        maximumDate={effectiveMaxDate}
         disabledDates={disabledDates}
         disabledWeekdays={disabledWeekdays}
         markedDates={markedDates}

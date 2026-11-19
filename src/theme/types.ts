@@ -53,9 +53,21 @@ export interface ThemeBorderRadius {
   full: number;
 }
 
+export interface ThemeColorsOverride {
+  backgroundColor?: string;
+  textColor?: string;
+  selectedTextColor?: string;
+  accentColor?: string;
+  dividerColor?: string;
+  headerBackground?: string;
+  cardBackground?: string;
+  borderColor?: string;
+}
+
 export interface ThemeConfig {
   mode?: ThemeMode;
   colors?: Partial<ThemeColors>;
+  themeColors?: ThemeColorsOverride;
   typography?: Partial<ThemeTypography>;
   spacing?: Partial<ThemeSpacing>;
   borderRadius?: Partial<ThemeBorderRadius>;

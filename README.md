@@ -4,7 +4,8 @@ A complete, ultra-lightweight, customizable React Native Date & Time Picker libr
 
 [![npm version](https://img.shields.io/npm/v/@izonnet-web-solution/react-native-date-time-picker-kit.svg)](https://www.npmjs.com/package/@izonnet-web-solution/react-native-date-time-picker-kit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/tests-88%20passed-brightgreen.svg)]()
+[![Build Status](https://img.shields.io/badge/tests-106%20passed-brightgreen.svg)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue.svg)]()
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)]()
 
 ---
@@ -55,8 +56,10 @@ A complete, ultra-lightweight, customizable React Native Date & Time Picker libr
 14. [Custom Hook (`useDateTimePicker`)](#custom-hook-usedatetimepicker)
 15. [Date Validation & Conversion Utilities](#date-validation--conversion-utilities)
 16. [Error Handling & Error Codes](#error-handling--error-codes)
-17. [Compatibility Matrix](#compatibility-matrix)
-18. [License](#license)
+17. [Props Reference Table](#props-reference-table)
+18. [Compatibility Matrix](#compatibility-matrix)
+19. [Contributing](#contributing)
+20. [License](#license)
 
 ---
 
@@ -85,6 +88,12 @@ A complete, ultra-lightweight, customizable React Native Date & Time Picker libr
 | :--- | :--- | :--- | :--- |
 | **iOS** | Swift 5.0 + UIKit (`UIDatePicker`, `UIViewController`) | TurboModule Spec (Obj-C++ JSI wrapper) | iOS 15.1+ |
 | **Android** | Kotlin 1.9+ + Android SDK (`DatePickerDialog`, `TimePickerDialog`) | TurboModule Spec (JNI C++ / Java wrapper) | Android API 24+ (Android 7.0+) |
+
+### React Native New Architecture & Expo Compatibility
+
+- **React Native New Architecture (Fabric & TurboModules):** Fully supported natively with typed Codegen specifications on React Native 0.74 – 0.88+.
+- **Expo Compatibility:** Fully compatible with **Expo Prebuild** (`npx expo run:ios`, `npx expo run:android`) and **Expo Development Client** (`expo-dev-client`).
+- **Note on Expo Go:** Because this library incorporates high-performance native Swift and Kotlin TurboModules, it requires a custom development client (`npx expo run:ios/android`) rather than standard Expo Go. Pure in-tree JS modes (`inline`, `modal`, `bottom-sheet`) work across all React Native platforms.
 
 ---
 
@@ -537,11 +546,105 @@ Available error codes:
 
 ---
 
+## Props Reference Table
+
+Complete reference for `<DateTimePicker />` and derived pickers (`DatePicker`, `TimePicker`, `DateRangePicker`, etc.):
+
+| Prop | Type | Default | Required | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `mode` | `'date' \| 'time' \| 'datetime' \| 'countdown'` | `'date'` | No | Selection mode for the picker. |
+| `value` | `Date \| number \| string \| null` | `null` | No | Controlled date value. Accepts a `Date` object, millisecond epoch number, or ISO string. |
+| `defaultValue` | `Date \| number \| string \| null` | `null` | No | Uncontrolled initial date value. |
+| `presentation` | `'native' \| 'inline' \| 'modal' \| 'bottom-sheet' \| 'fullscreen'` | `'native'` | No | Display presentation container. Native launches OS modal; others render pure in-tree UI. |
+| `display` | `'default' \| 'compact' \| 'inline' \| 'spinner' \| 'clock'` | `'default'` | No | Visual style for native pickers on iOS and Android. |
+| `open` | `boolean` | `false` | No | Controls modal visibility in declarative presentation modes. |
+| `isVisible` | `boolean` | `false` | No | Convenience alias for `open` or `visible`. |
+| `minimumDate` | `Date \| number \| string` | `undefined` | No | Lower date/time boundary. Clamps selection and disables dates prior to this value. |
+| `minDate` | `Date \| number \| string` | `undefined` | No | Convenience alias for `minimumDate`. |
+| `maximumDate` | `Date \| number \| string` | `undefined` | No | Upper date/time boundary. Clamps selection and disables dates after this value. |
+| `maxDate` | `Date \| number \| string` | `undefined` | No | Convenience alias for `maximumDate`. |
+| `minimumTime` | `string \| { hour: number; minute: number }` | `undefined` | No | Minimum allowable time boundary (e.g. `"09:00"` or `{ hour: 9, minute: 0 }`). |
+| `maximumTime` | `string \| { hour: number; minute: number }` | `undefined` | No | Maximum allowable time boundary (e.g. `"17:00"` or `{ hour: 17, minute: 0 }`). |
+| `minuteInterval` | `1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 10 \| 12 \| 15 \| 20 \| 30` | `1` | No | Interval stepping for minute wheel or clock. |
+| `locale` | `string \| PartialLocaleData` | Device locale | No | BCP 47 locale tag (`'en'`, `'es'`, `'fr'`, `'hi'`, `'ja'`, etc.) or custom locale dictionary. |
+| `timeZone` | `string` | Device TZ | No | Target IANA timezone identifier (e.g., `'America/New_York'`, `'Asia/Kolkata'`). |
+| `timeZoneOffsetInMinutes`| `number` | `undefined` | No | Target UTC offset in minutes (e.g. `330` for IST `+05:30`). |
+| `utcOffset` | `number` | `undefined` | No | Convenience alias for `timeZoneOffsetInMinutes` (accepts hours e.g. `5.5` or minutes `330`). |
+| `is24Hour` | `boolean` | Locale default | No | Explicit override for 24-hour time formatting instead of 12-hour AM/PM. |
+| `disabledDates` | `(Date \| string)[]` | `[]` | No | Array of dates or ISO strings to disable from selection. |
+| `disabledWeekdays` | `number[]` | `[]` | No | Array of weekday indices to disable (0 = Sunday, 1 = Monday, ..., 6 = Saturday). |
+| `markedDates` | `MarkedDatesMap` | `{}` | No | Mapping of date keys (`YYYY-MM-DD`) with colored dots, badges, or custom highlights. |
+| `firstDayOfWeek` | `number` | `0` (Sun) | No | First day of the week in calendar grids (0 = Sunday, 1 = Monday, 6 = Saturday). |
+| `theme` | `'light' \| 'dark' \| 'auto' \| ThemeConfig` | `'auto'` | No | Visual theme mode or complete customized ThemeConfig design tokens. |
+| `themeColors` | `ThemeColorsOverride` | `undefined` | No | Clean palette overrides (`backgroundColor`, `textColor`, `accentColor`, `dividerColor`). |
+| `styles` | `{ headerStyle?, confirmButtonStyle?, cancelButtonStyle?, containerStyle? }` | `undefined` | No | Style overrides for modal container, header, and action buttons. |
+| `title` | `string` | Mode title | No | Modal header or native dialog title. |
+| `confirmText` | `string` | `'Confirm'` | No | Text label for the confirmation button. |
+| `cancelText` | `string` | `'Cancel'` | No | Text label for the cancellation button. |
+| `accentColor` | `string` | Theme primary | No | Accent color for active selections, highlights, and buttons. |
+| `textColor` | `string` | Theme text | No | Base text color. |
+| `backgroundColor` | `string` | Theme surface | No | Modal and component background color. |
+| `showPresets` | `boolean` | `false` | No | Whether to show quick date presets bar (Today, Yesterday, Last 7 Days, This Month). |
+| `customPresets` | `DatePreset[]` | `undefined` | No | Custom array of date presets to render. |
+| `disabled` | `boolean` | `false` | No | When true, disables user interaction with the picker. |
+| `onChange` | `(event: { date: Date; mode: string }) => void` | `undefined` | No | Callback invoked on intermediate date or time selection changes. |
+| `onConfirm` | `(date: Date) => void` | `undefined` | No | Callback invoked when user confirms selection with the finalized `Date`. |
+| `onCancel` | `() => void` | `undefined` | No | Callback invoked when user cancels or dismisses picker. |
+| `onDismiss` | `() => void` | `undefined` | No | Callback invoked when native dialog is dismissed. |
+| `onOpen` | `() => void` | `undefined` | No | Callback invoked when picker modal opens. |
+| `onError` | `(error: DateTimePickerError) => void` | `undefined` | No | Callback invoked if an error occurs during presentation or date calculation. |
+| `testID` | `string` | `undefined` | No | Identifier for end-to-end automated testing. |
+
+---
+
 ## Compatibility Matrix
 
 | Library Version | React Native | iOS | Android | New Architecture |
 | :--- | :--- | :--- | :--- | :--- |
 | `1.0.0` | `0.74.0` – `0.88.x+` | iOS 15.1+ | API 24+ (Android 7.0+) | **Yes (Required)** |
+
+---
+
+## Contributing
+
+We welcome community contributions, bug reports, and feature suggestions!
+
+### Local Development Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit.git
+   cd react-native-date-time-picker-kit
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Run code quality checks & tests:**
+   ```bash
+   # Run typechecks
+   npm run typecheck
+
+   # Run ESLint
+   npm run lint
+
+   # Run automated Jest test suite
+   npm test
+   ```
+
+4. **Build distribution binaries:**
+   ```bash
+   npm run prepare
+   ```
+
+### Submitting Pull Requests
+
+1. Fork the repo and create your feature branch: `git checkout -b feat/my-new-feature`.
+2. Commit your changes with descriptive commit messages following Conventional Commits format (`feat:`, `fix:`, `docs:`, `test:`).
+3. Ensure all 106+ unit tests pass and code passes `npm run lint` and `npm run typecheck`.
+4. Open a Pull Request on GitHub with a clear explanation of your changes.
 
 ---
 

@@ -20,14 +20,20 @@ export interface TimePickerRef {
   reset: () => void;
 }
 
-export interface TimePickerProps extends BaseModalProps {
+export interface TimePickerProps extends Omit<BaseModalProps, 'onConfirm'> {
   presentation?: PresentationMode;
   value?: Date | string | number | null;
   defaultValue?: Date | string | number | null;
   onChange?: (date: Date) => void;
   onConfirmTime?: (date: Date) => void;
+  /**
+   * Alias for `onConfirmTime`.
+   */
+  onConfirm?: (date: Date) => void;
   is24Hour?: boolean;
   minuteInterval?: MinuteInterval;
+  timeZone?: string;
+  utcOffset?: number;
   locale?: string | PartialLocaleData;
   theme?: ThemeMode | ThemeConfig;
   testID?: string;
@@ -56,9 +62,11 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
       showHandle,
       closeOnBackdropPress,
       testID,
+      ...restProps
     },
     ref
   ) => {
+    const effectiveOnConfirm = onConfirmTime ?? restProps.onConfirm;
     const theme = useTheme(propTheme);
     const locale = useLocale(propLocale);
 
@@ -67,7 +75,12 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
     const [selectedTime, setSelectedTime] = useState<Date>(initialDate);
     const [isVisible, setIsVisible] = useState(false);
 
-    const modalVisible = propVisible !== undefined ? propVisible : isVisible;
+    const modalVisible =
+      restProps.isVisible !== undefined
+        ? restProps.isVisible
+        : propVisible !== undefined
+          ? propVisible
+          : isVisible;
 
     useImperativeHandle(ref, () => ({
       open: async () => {
@@ -84,7 +97,7 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
             const confirmedDate = timestampToDate(res.timestamp);
             setSelectedTime(confirmedDate);
             onChange?.(confirmedDate);
-            onConfirmTime?.(confirmedDate);
+            effectiveOnConfirm?.(confirmedDate);
             return confirmedDate;
           }
           return null;
@@ -123,10 +136,10 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
     );
 
     const handleConfirm = useCallback(() => {
-      onConfirmTime?.(selectedTime);
+      effectiveOnConfirm?.(selectedTime);
       setIsVisible(false);
       onClose?.();
-    }, [selectedTime, onConfirmTime, onClose]);
+    }, [selectedTime, effectiveOnConfirm, onClose]);
 
     const handleCancel = useCallback(() => {
       onCancel?.();

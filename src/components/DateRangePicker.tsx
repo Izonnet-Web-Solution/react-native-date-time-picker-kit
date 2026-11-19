@@ -30,7 +30,10 @@ export interface DateRangePickerRef {
   reset: () => void;
 }
 
-export interface DateRangePickerProps extends BaseModalProps {
+export interface DateRangePickerProps extends Omit<
+  BaseModalProps,
+  'onConfirm'
+> {
   presentation?: PresentationMode;
   startDate?: Date | null;
   endDate?: Date | null;
@@ -38,8 +41,20 @@ export interface DateRangePickerProps extends BaseModalProps {
   defaultEndDate?: Date | null;
   onChange?: (range: DateRange) => void;
   onConfirmRange?: (range: { startDate: Date; endDate: Date }) => void;
+  /**
+   * Alias for `onConfirmRange`.
+   */
+  onConfirm?: (range: { startDate: Date; endDate: Date }) => void;
   minimumDate?: Date | string | number;
+  /**
+   * Alias for `minimumDate`.
+   */
+  minDate?: Date | string | number;
   maximumDate?: Date | string | number;
+  /**
+   * Alias for `maximumDate`.
+   */
+  maxDate?: Date | string | number;
   disabledDates?: (Date | string)[];
   disabledWeekdays?: number[];
   markedDates?: MarkedDatesMap;
@@ -85,9 +100,14 @@ export const DateRangePicker = forwardRef<
       showHandle,
       closeOnBackdropPress,
       testID,
+      ...restProps
     },
     ref
   ) => {
+    const effectiveMin = minimumDate ?? restProps.minDate;
+    const effectiveMax = maximumDate ?? restProps.maxDate;
+    const effectiveOnConfirm = onConfirmRange ?? restProps.onConfirm;
+
     const theme = useTheme(propTheme);
     const locale = useLocale(propLocale);
 
@@ -98,7 +118,12 @@ export const DateRangePicker = forwardRef<
     });
     const [activePresetId, setActivePresetId] = useState<string | undefined>();
 
-    const modalVisible = propVisible !== undefined ? propVisible : isVisible;
+    const modalVisible =
+      restProps.isVisible !== undefined
+        ? restProps.isVisible
+        : propVisible !== undefined
+          ? propVisible
+          : isVisible;
 
     useImperativeHandle(ref, () => ({
       open: () => setIsVisible(true),
@@ -143,14 +168,14 @@ export const DateRangePicker = forwardRef<
 
     const handleConfirm = useCallback(() => {
       if (range.startDate && range.endDate) {
-        onConfirmRange?.({
+        effectiveOnConfirm?.({
           startDate: range.startDate,
           endDate: range.endDate,
         });
       }
       setIsVisible(false);
       onClose?.();
-    }, [range, onConfirmRange, onClose]);
+    }, [range, effectiveOnConfirm, onClose]);
 
     const handleCancel = useCallback(() => {
       onCancel?.();
@@ -187,8 +212,8 @@ export const DateRangePicker = forwardRef<
           startDate={range.startDate}
           endDate={range.endDate}
           onRangeChange={handleRangeChange}
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
+          minimumDate={effectiveMin}
+          maximumDate={effectiveMax}
           disabledDates={disabledDates}
           disabledWeekdays={disabledWeekdays}
           markedDates={markedDates}

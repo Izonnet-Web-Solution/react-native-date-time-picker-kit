@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import {
+  FlatList,
+  type ListRenderItemInfo,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  ScrollView,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -36,7 +38,7 @@ export function WheelPicker<T = any>({
   testID,
 }: WheelPickerProps<T>): React.ReactElement {
   const theme = useTheme(propTheme);
-  const scrollRef = useRef<any>(null);
+  const flatListRef = useRef<FlatList<WheelPickerItem<T>>>(null);
   const isScrollingRef = useRef(false);
 
   const halfVisible = Math.floor(visibleItems / 2);
@@ -47,11 +49,15 @@ export function WheelPicker<T = any>({
 
   // Scroll to position when selectedValue changes externally
   useEffect(() => {
-    if (!isScrollingRef.current && scrollRef.current && activeIndex >= 0) {
-      scrollRef.current.scrollTo({
-        y: activeIndex * itemHeight,
-        animated: false,
-      });
+    if (!isScrollingRef.current && flatListRef.current && activeIndex >= 0) {
+      try {
+        flatListRef.current.scrollToOffset({
+          offset: activeIndex * itemHeight,
+          animated: false,
+        });
+      } catch {
+        // Fallback for initial render
+      }
     }
   }, [activeIndex, itemHeight]);
 
@@ -75,8 +81,8 @@ export function WheelPicker<T = any>({
 
   const handleItemPress = useCallback(
     (index: number) => {
-      scrollRef.current?.scrollTo({
-        y: index * itemHeight,
+      flatListRef.current?.scrollToOffset({
+        offset: index * itemHeight,
         animated: true,
       });
       const item = items[index];
@@ -85,6 +91,63 @@ export function WheelPicker<T = any>({
       }
     },
     [itemHeight, items, onChange]
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: ListRenderItemInfo<WheelPickerItem<T>>) => {
+      const isSelected = index === activeIndex;
+      return (
+        <TouchableOpacity
+          key={`wheel-${index}-${String(item.value)}`}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
+          accessibilityState={{ selected: isSelected }}
+          activeOpacity={0.8}
+          onPress={() => handleItemPress(index)}
+          style={[
+            styles.itemRow,
+            {
+              height: itemHeight,
+            },
+          ]}
+        >
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.itemText,
+              {
+                color: isSelected ? theme.colors.text : theme.colors.textMuted,
+                fontSize: isSelected
+                  ? theme.typography.fontSizeLarge
+                  : theme.typography.fontSizeMedium,
+                fontWeight: isSelected
+                  ? theme.typography.fontWeightBold
+                  : theme.typography.fontWeightRegular,
+                transform: isSelected ? [{ scale: 1.05 }] : [{ scale: 0.95 }],
+              },
+            ]}
+          >
+            {item.label}
+          </Text>
+        </TouchableOpacity>
+      );
+    },
+    [activeIndex, handleItemPress, itemHeight, theme]
+  );
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: itemHeight,
+      offset: itemHeight * index,
+      index,
+    }),
+    [itemHeight]
+  );
+
+  const keyExtractor = useCallback(
+    (item: WheelPickerItem<T>, index: number) =>
+      `wheel-${index}-${String(item.value)}`,
+    []
   );
 
   return (
@@ -112,63 +175,30 @@ export function WheelPicker<T = any>({
         ]}
       />
 
-      {/* Wheel ScrollView */}
-      <ScrollView
-        ref={scrollRef}
+      {/* Optimized FlatList Wheel */}
+      <FlatList
+        ref={flatListRef}
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        getItemLayout={getItemLayout}
+        initialScrollIndex={
+          activeIndex >= 0 && activeIndex < items.length ? activeIndex : 0
+        }
         showsVerticalScrollIndicator={false}
         snapToInterval={itemHeight}
         snapToAlignment="center"
         decelerationRate="fast"
+        removeClippedSubviews={Platform.OS === 'android'}
+        maxToRenderPerBatch={visibleItems * 2}
+        windowSize={visibleItems + 2}
         onScrollBeginDrag={handleScrollBeginDrag}
         onMomentumScrollEnd={handleMomentumScrollEnd}
         contentContainerStyle={{
           paddingTop: halfVisible * itemHeight,
           paddingBottom: halfVisible * itemHeight,
         }}
-      >
-        {items.map((item, index) => {
-          const isSelected = index === activeIndex;
-          return (
-            <TouchableOpacity
-              key={`wheel-${index}-${String(item.value)}`}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-              accessibilityState={{ selected: isSelected }}
-              activeOpacity={0.8}
-              onPress={() => handleItemPress(index)}
-              style={[
-                styles.itemRow,
-                {
-                  height: itemHeight,
-                },
-              ]}
-            >
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.itemText,
-                  {
-                    color: isSelected
-                      ? theme.colors.text
-                      : theme.colors.textMuted,
-                    fontSize: isSelected
-                      ? theme.typography.fontSizeLarge
-                      : theme.typography.fontSizeMedium,
-                    fontWeight: isSelected
-                      ? theme.typography.fontWeightBold
-                      : theme.typography.fontWeightRegular,
-                    transform: isSelected
-                      ? [{ scale: 1.05 }]
-                      : [{ scale: 0.95 }],
-                  },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      />
     </View>
   );
 }

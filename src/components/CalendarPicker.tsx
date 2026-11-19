@@ -19,10 +19,26 @@ export type MarkedDatesMap = Record<string, MarkedDateConfig>;
 
 export interface CalendarPickerProps {
   value?: Date | string | number | null;
+  /**
+   * Alias for `value`.
+   */
+  selectedDate?: Date | string | number | null;
   defaultValue?: Date | string | number | null;
   onChange?: (date: Date) => void;
+  /**
+   * Alias for `onChange`.
+   */
+  onDateSelect?: (date: Date) => void;
   minimumDate?: Date | string | number;
+  /**
+   * Alias for `minimumDate`.
+   */
+  minDate?: Date | string | number;
   maximumDate?: Date | string | number;
+  /**
+   * Alias for `maximumDate`.
+   */
+  maxDate?: Date | string | number;
   disabledDates?: (Date | string)[];
   disabledWeekdays?: number[];
   markedDates?: MarkedDatesMap;
@@ -73,7 +89,13 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({
   onRangeChange,
   onMonthChange,
   testID,
+  ...restProps
 }) => {
+  const effectiveMin = minimumDate ?? restProps.minDate;
+  const effectiveMax = maximumDate ?? restProps.maxDate;
+  const effectiveVal = value ?? restProps.selectedDate;
+  const effectiveOnChange = onChange ?? restProps.onDateSelect;
+
   const resolvedTheme: ResolvedTheme = useTheme(propTheme);
   const localeData: LocaleData = useLocale(propLocale);
 
@@ -83,8 +105,10 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({
       : localeData.firstDayOfWeek;
 
   // Selected date state (single mode)
-  const initialDate = parseDate(value) || parseDate(defaultValue) || new Date();
-  const selectedDate = value !== undefined ? parseDate(value) : initialDate;
+  const initialDate =
+    parseDate(effectiveVal) || parseDate(defaultValue) || new Date();
+  const selectedDate =
+    effectiveVal !== undefined ? parseDate(effectiveVal) : initialDate;
 
   // Range dates state (range mode)
   const [rangeStart, setRangeStart] = useState<Date | null>(
@@ -108,12 +132,12 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({
   const viewMonth = viewDate.getMonth(); // 0-11
 
   const minDateObj = useMemo(
-    () => (minimumDate ? parseDate(minimumDate) : null),
-    [minimumDate]
+    () => (effectiveMin ? parseDate(effectiveMin) : null),
+    [effectiveMin]
   );
   const maxDateObj = useMemo(
-    () => (maximumDate ? parseDate(maximumDate) : null),
-    [maximumDate]
+    () => (effectiveMax ? parseDate(effectiveMax) : null),
+    [effectiveMax]
   );
 
   // Month navigation
@@ -334,10 +358,16 @@ export const CalendarPicker: React.FC<CalendarPickerProps> = ({
           }
         }
       } else {
-        onChange?.(item.date);
+        effectiveOnChange?.(item.date);
       }
     },
-    [rangeMode, activeStartDate, activeEndDate, onRangeChange, onChange]
+    [
+      rangeMode,
+      activeStartDate,
+      activeEndDate,
+      onRangeChange,
+      effectiveOnChange,
+    ]
   );
 
   const monthLabel = `${localeData.months[viewMonth]} ${viewYear}`;

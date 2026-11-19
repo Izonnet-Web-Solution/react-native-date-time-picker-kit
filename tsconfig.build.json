@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig",
+  "compilerOptions": {
+    "declaration": true
+  },
   "exclude": ["example", "lib", "__tests__"]
 }

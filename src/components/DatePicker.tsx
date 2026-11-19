@@ -8,6 +8,7 @@ import { useTheme } from '../theme';
 import type { ThemeConfig, ThemeMode } from '../theme/types';
 import type { BaseModalProps, PresentationMode } from '../types/presentation';
 import {
+  clampDate,
   dateToTimestamp,
   parseDate,
   timestampToDate,
@@ -25,14 +26,26 @@ export interface DatePickerRef {
   reset: () => void;
 }
 
-export interface DatePickerProps extends BaseModalProps {
+export interface DatePickerProps extends Omit<BaseModalProps, 'onConfirm'> {
   presentation?: PresentationMode;
   value?: Date | string | number | null;
   defaultValue?: Date | string | number | null;
   onChange?: (date: Date) => void;
   onConfirmDate?: (date: Date) => void;
+  /**
+   * Alias for `onConfirmDate`.
+   */
+  onConfirm?: (date: Date) => void;
   minimumDate?: Date | string | number;
+  /**
+   * Alias for `minimumDate`.
+   */
+  minDate?: Date | string | number;
   maximumDate?: Date | string | number;
+  /**
+   * Alias for `maximumDate`.
+   */
+  maxDate?: Date | string | number;
   disabledDates?: (Date | string)[];
   disabledWeekdays?: number[];
   markedDates?: MarkedDatesMap;
@@ -73,19 +86,31 @@ export const DatePicker = forwardRef<DatePickerRef, DatePickerProps>(
       showHandle,
       closeOnBackdropPress,
       testID,
+      ...restProps
     },
     ref
   ) => {
+    const effectiveMin = minimumDate ?? restProps.minDate;
+    const effectiveMax = maximumDate ?? restProps.maxDate;
+    const effectiveOnConfirm = onConfirmDate ?? restProps.onConfirm;
+
     const theme = useTheme(propTheme);
     const locale = useLocale(propLocale);
 
     const initialDate =
       parseDate(propValue) || parseDate(defaultValue) || new Date();
-    const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
+    const clampedInitial =
+      clampDate(initialDate, effectiveMin, effectiveMax) ?? initialDate;
+    const [selectedDate, setSelectedDate] = useState<Date>(clampedInitial);
     const [isVisible, setIsVisible] = useState(false);
     const [activePresetId, setActivePresetId] = useState<string | undefined>();
 
-    const modalVisible = propVisible !== undefined ? propVisible : isVisible;
+    const modalVisible =
+      restProps.isVisible !== undefined
+        ? restProps.isVisible
+        : propVisible !== undefined
+          ? propVisible
+          : isVisible;
 
     // Imperative ref implementation
     useImperativeHandle(ref, () => ({
@@ -93,11 +118,11 @@ export const DatePicker = forwardRef<DatePickerRef, DatePickerProps>(
         if (presentation === 'native') {
           const res = await NativeDateTimePicker.openDatePicker({
             value: selectedDate.getTime(),
-            minimumDate: minimumDate
-              ? (dateToTimestamp(minimumDate) ?? undefined)
+            minimumDate: effectiveMin
+              ? (dateToTimestamp(effectiveMin) ?? undefined)
               : undefined,
-            maximumDate: maximumDate
-              ? (dateToTimestamp(maximumDate) ?? undefined)
+            maximumDate: effectiveMax
+              ? (dateToTimestamp(effectiveMax) ?? undefined)
               : undefined,
             title: title || locale.selectDateTitle,
             confirmText: confirmText || locale.confirmText,
@@ -105,10 +130,13 @@ export const DatePicker = forwardRef<DatePickerRef, DatePickerProps>(
           });
           if (res.action === 'confirmed') {
             const confirmedDate = timestampToDate(res.timestamp);
-            setSelectedDate(confirmedDate);
-            onChange?.(confirmedDate);
-            onConfirmDate?.(confirmedDate);
-            return confirmedDate;
+            const clamped =
+              clampDate(confirmedDate, effectiveMin, effectiveMax) ??
+              confirmedDate;
+            setSelectedDate(clamped);
+            onChange?.(clamped);
+            effectiveOnConfirm?.(clamped);
+            return clamped;
           }
           return null;
         } else {
@@ -164,10 +192,12 @@ export const DatePicker = forwardRef<DatePickerRef, DatePickerProps>(
     );
 
     const handleConfirm = useCallback(() => {
-      onConfirmDate?.(selectedDate);
+      const clamped =
+        clampDate(selectedDate, effectiveMin, effectiveMax) ?? selectedDate;
+      effectiveOnConfirm?.(clamped);
       setIsVisible(false);
       onClose?.();
-    }, [selectedDate, onConfirmDate, onClose]);
+    }, [selectedDate, effectiveMin, effectiveMax, effectiveOnConfirm, onClose]);
 
     const handleCancel = useCallback(() => {
       onCancel?.();
@@ -207,8 +237,8 @@ export const DatePicker = forwardRef<DatePickerRef, DatePickerProps>(
         <CalendarPicker
           value={selectedDate}
           onChange={handleDayChange}
-          minimumDate={minimumDate}
-          maximumDate={maximumDate}
+          minimumDate={effectiveMin}
+          maximumDate={effectiveMax}
           disabledDates={disabledDates}
           disabledWeekdays={disabledWeekdays}
           markedDates={markedDates}

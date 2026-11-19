@@ -4,7 +4,14 @@ export type PresentationMode =
 export type ModalAnimationType = 'slide' | 'fade' | 'none';
 
 export interface BaseModalProps {
+  /**
+   * Visibility flag for modal presentation.
+   */
   visible?: boolean;
+  /**
+   * Alias for `visible`.
+   */
+  isVisible?: boolean;
   onClose?: () => void;
   title?: string;
   confirmText?: string;
