@@ -47,14 +47,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/react-native-date-time-picker-kit.git"
+    "url": "git+https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit.git"
   },
-  "author": "IzoMalay <malay@izonnet.com> (https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit)",
+  "author": "IzoMalay <malay@izonnet.com> (https://github.com/Izonnet-Web-Solution)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/react-native-date-time-picker-kit/issues"
+    "url": "https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/issues"
   },
-  "homepage": "https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/react-native-date-time-picker-kit#readme",
+  "homepage": "https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
