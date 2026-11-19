@@ -1,7 +1,19 @@
-import { TurboModuleRegistry, type TurboModule } from 'react-native';
+import type { TurboModule } from 'react-native';
+import { TurboModuleRegistry } from 'react-native';
+
+export type UnsafeObject = Object;
 
 export interface Spec extends TurboModule {
-  multiply(a: number, b: number): number;
+  openDatePicker(options: UnsafeObject): Promise<UnsafeObject>;
+  openTimePicker(options: UnsafeObject): Promise<UnsafeObject>;
+  openDateTimePicker(options: UnsafeObject): Promise<UnsafeObject>;
+  openCountdownPicker(options: UnsafeObject): Promise<UnsafeObject>;
+  closePicker(): Promise<boolean>;
+  confirmPicker(): Promise<UnsafeObject>;
+  cancelPicker(): Promise<boolean>;
+  setSelectedDate(timestamp: number): Promise<boolean>;
+  getSelectedDate(): Promise<UnsafeObject>;
+  resetPicker(): Promise<boolean>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('DateTimePickerKit');

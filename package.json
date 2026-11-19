@@ -1,5 +1,5 @@
 {
-  "name": "react-native-date-time-picker-kit",
+  "name": "@izonnet-web-solution/react-native-date-time-picker-kit",
   "version": "0.1.0",
   "description": "A lightweight React Native date and time picker library built with native iOS and Android components using Swift and Kotlin. Supports date, time, and datetime selection with validation, min/max date, locale, 12/24-hour format, and customizable callbacks. No third-party runtime picker dependencies.",
   "main": "./lib/module/index.js",
@@ -36,8 +36,8 @@
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
     "typecheck": "tsc",
-    "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "test": "jest",
+    "lint": "NODE_OPTIONS='--experimental-require-module' eslint \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\"",
+    "test": "NODE_OPTIONS='--experimental-require-module' jest --watchman=false",
     "release": "release-it --only-version"
   },
   "keywords": [
