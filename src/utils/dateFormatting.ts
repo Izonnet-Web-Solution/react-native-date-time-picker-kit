@@ -156,11 +156,28 @@ export function formatDate(
 }
 
 export function formatTime(
-  hour: number,
-  minute: number,
+  hourOrDate: number | Date,
+  minuteOrIs24Hour?: number | boolean | '12h' | '24h',
   is24Hour = false
 ): string {
+  if (hourOrDate instanceof Date) {
+    const is24 =
+      minuteOrIs24Hour === true ||
+      minuteOrIs24Hour === '24h' ||
+      (typeof minuteOrIs24Hour !== 'boolean' &&
+        minuteOrIs24Hour !== '12h' &&
+        is24Hour);
+    return formatDate(hourOrDate, is24 ? 'HH:mm' : 'hh:mm A');
+  }
+  const hour = hourOrDate;
+  const minute = typeof minuteOrIs24Hour === 'number' ? minuteOrIs24Hour : 0;
+  const is24 =
+    typeof minuteOrIs24Hour === 'boolean'
+      ? minuteOrIs24Hour
+      : minuteOrIs24Hour === '24h'
+        ? true
+        : is24Hour;
   const d = new Date();
   d.setHours(hour, minute, 0, 0);
-  return formatDate(d, is24Hour ? 'HH:mm' : 'hh:mm A');
+  return formatDate(d, is24 ? 'HH:mm' : 'hh:mm A');
 }

@@ -1,19 +1,13 @@
 const path = require('path');
 const { getDefaultConfig } = require('@react-native/metro-config');
-const { withMetroConfig } = require('react-native-monorepo-config');
 
 const root = path.resolve(__dirname, '..');
+const defaultConfig = getDefaultConfig(__dirname);
 
-/**
- * Metro configuration
- * https://facebook.github.io/metro/docs/configuration
- *
- * @type {import('metro-config').MetroConfig}
- */
-const config = withMetroConfig(getDefaultConfig(__dirname), {
-  root,
-  dirname: __dirname,
-  conditions: ['react-native-date-time-picker-kit-source'],
-});
+defaultConfig.watchFolders = [root];
+defaultConfig.resolver.nodeModulesPaths = [
+  path.resolve(__dirname, 'node_modules'),
+  path.resolve(root, 'node_modules'),
+];
 
-module.exports = config;
+module.exports = defaultConfig;
