@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   Alert,
+  LogBox,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -9,6 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+LogBox.ignoreAllLogs(true);
 import {
   CalendarPicker,
   DatePicker,
