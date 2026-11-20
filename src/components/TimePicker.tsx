@@ -20,6 +20,55 @@ export interface TimePickerRef {
   reset: () => void;
 }
 
+function parseTimeBoundary(
+  t?: string | { hour: number; minute: number }
+): { hour: number; minute: number } | null {
+  if (!t) return null;
+  if (
+    typeof t === 'object' &&
+    typeof t.hour === 'number' &&
+    typeof t.minute === 'number'
+  ) {
+    return { hour: t.hour, minute: t.minute };
+  }
+  if (typeof t === 'string') {
+    const parts = t.split(':');
+    if (parts.length >= 2) {
+      const h = parseInt(parts[0] as string, 10);
+      const m = parseInt(parts[1] as string, 10);
+      if (!isNaN(h) && !isNaN(m)) return { hour: h, minute: m };
+    }
+  }
+  return null;
+}
+
+function clampTimeToBoundary(
+  date: Date,
+  minTime?: string | { hour: number; minute: number },
+  maxTime?: string | { hour: number; minute: number }
+): Date {
+  const result = new Date(date.getTime());
+  const min = parseTimeBoundary(minTime);
+  const max = parseTimeBoundary(maxTime);
+  if (min) {
+    if (
+      result.getHours() < min.hour ||
+      (result.getHours() === min.hour && result.getMinutes() < min.minute)
+    ) {
+      result.setHours(min.hour, min.minute, 0, 0);
+    }
+  }
+  if (max) {
+    if (
+      result.getHours() > max.hour ||
+      (result.getHours() === max.hour && result.getMinutes() > max.minute)
+    ) {
+      result.setHours(max.hour, max.minute, 0, 0);
+    }
+  }
+  return result;
+}
+
 export interface TimePickerProps extends Omit<BaseModalProps, 'onConfirm'> {
   presentation?: PresentationMode;
   value?: Date | string | number | null;
@@ -32,6 +81,10 @@ export interface TimePickerProps extends Omit<BaseModalProps, 'onConfirm'> {
   onConfirm?: (date: Date) => void;
   is24Hour?: boolean;
   minuteInterval?: MinuteInterval;
+  minimumTime?: string | { hour: number; minute: number };
+  minTime?: string | { hour: number; minute: number };
+  maximumTime?: string | { hour: number; minute: number };
+  maxTime?: string | { hour: number; minute: number };
   timeZone?: string;
   utcOffset?: number;
   locale?: string | PartialLocaleData;
@@ -55,6 +108,8 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
       onChange,
       is24Hour = false,
       minuteInterval = 1,
+      minimumTime,
+      maximumTime,
       locale: propLocale,
       theme: propTheme,
       backdropOpacity,
@@ -67,11 +122,16 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
     ref
   ) => {
     const effectiveOnConfirm = onConfirmTime ?? restProps.onConfirm;
+    const effectiveMinTime = minimumTime ?? restProps.minTime;
+    const effectiveMaxTime = maximumTime ?? restProps.maxTime;
     const theme = useTheme(propTheme);
     const locale = useLocale(propLocale);
 
-    const initialDate =
-      parseDate(propValue) || parseDate(defaultValue) || new Date();
+    const initialDate = clampTimeToBoundary(
+      parseDate(propValue) || parseDate(defaultValue) || new Date(),
+      effectiveMinTime,
+      effectiveMaxTime
+    );
     const [selectedTime, setSelectedTime] = useState<Date>(initialDate);
     const [isVisible, setIsVisible] = useState(false);
 
@@ -94,7 +154,11 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
             cancelText: cancelText || locale.cancelText,
           });
           if (res.action === 'confirmed') {
-            const confirmedDate = timestampToDate(res.timestamp);
+            const confirmedDate = clampTimeToBoundary(
+              timestampToDate(res.timestamp),
+              effectiveMinTime,
+              effectiveMaxTime
+            );
             setSelectedTime(confirmedDate);
             onChange?.(confirmedDate);
             effectiveOnConfirm?.(confirmedDate);
@@ -119,7 +183,9 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
       setValue: (newTime: Date | string | number) => {
         const parsed = parseDate(newTime);
         if (parsed) {
-          setSelectedTime(parsed);
+          setSelectedTime(
+            clampTimeToBoundary(parsed, effectiveMinTime, effectiveMaxTime)
+          );
         }
       },
       reset: () => {
@@ -129,17 +195,33 @@ export const TimePicker = forwardRef<TimePickerRef, TimePickerProps>(
 
     const handleClockChange = useCallback(
       (res: { date: Date }) => {
-        setSelectedTime(res.date);
-        onChange?.(res.date);
+        const clamped = clampTimeToBoundary(
+          res.date,
+          effectiveMinTime,
+          effectiveMaxTime
+        );
+        setSelectedTime(clamped);
+        onChange?.(clamped);
       },
-      [onChange]
+      [onChange, effectiveMinTime, effectiveMaxTime]
     );
 
     const handleConfirm = useCallback(() => {
-      effectiveOnConfirm?.(selectedTime);
+      const clamped = clampTimeToBoundary(
+        selectedTime,
+        effectiveMinTime,
+        effectiveMaxTime
+      );
+      effectiveOnConfirm?.(clamped);
       setIsVisible(false);
       onClose?.();
-    }, [selectedTime, effectiveOnConfirm, onClose]);
+    }, [
+      selectedTime,
+      effectiveOnConfirm,
+      effectiveMinTime,
+      effectiveMaxTime,
+      onClose,
+    ]);
 
     const handleCancel = useCallback(() => {
       onCancel?.();
