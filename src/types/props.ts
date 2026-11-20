@@ -321,6 +321,24 @@ export interface DateTimePickerProps extends Omit<
   backdropStyleIOS?: any;
 
   /**
+   * Corner radius for the ActionSheet cards on iOS.
+   * @default 14
+   */
+  cardBorderRadius?: number;
+
+  /**
+   * Whether haptic feedback is triggered on date/time selection changes on iOS.
+   * @default true
+   */
+  hapticFeedbackEnabled?: boolean;
+
+  /**
+   * Header title text displayed above the picker on iOS.
+   * Alias for `title`.
+   */
+  headerTextIOS?: string;
+
+  /**
    * Accessibility: Whether this element is an accessibility element.
    */
   accessible?: boolean;

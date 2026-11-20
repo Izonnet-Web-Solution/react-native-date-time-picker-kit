@@ -139,6 +139,18 @@ pnpm add @izonnet-web-solution/react-native-date-time-modal
 cd ios && pod install && cd ..
 ```
 
+### Expo Setup (Managed Workflow / EAS Build)
+
+This library includes a built-in **Expo Config Plugin** (`app.plugin.js`). Simply add it to your `app.json`:
+
+```json
+{
+  "expo": {
+    "plugins": ["@izonnet-web-solution/react-native-date-time-modal"]
+  }
+}
+```
+
 ### Android Setup
 
 Automatic linking is fully supported. No manual changes to `MainApplication.kt` or `settings.gradle` are required.
@@ -357,6 +369,10 @@ const handleReset = () => pickerRef.current?.reset();
 | `cancelTextIOS` | `string` | `'Cancel'` | Label for the iOS cancel button. |
 | `accentColorIOS` | `string` | `'#007AFF'` | Color tint for iOS controls. |
 | `buttonTextColorIOS` | `string` | `'#007AFF'` | Text color for iOS buttons. |
+| `backdropOpacity` | `number` | `0.4` | Background overlay opacity on iOS (`0.0` to `1.0`). |
+| `cardBorderRadius` | `number` | `14` | Corner radius for iOS ActionSheet cards. |
+| `hapticFeedbackEnabled` | `boolean` | `true` | Whether haptic vibration triggers on iOS wheel scrolling. |
+| `headerTextIOS` | `string` | `undefined` | Header title displayed above picker on iOS. |
 | `locale` | `string` | Device default | Locale identifier (e.g. `'en_US'`, `'es_ES'`). |
 | `testID` | `string` | `undefined` | Test identifier for automated testing. |
 

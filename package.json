@@ -14,6 +14,7 @@
     },
     "./package.json": "./package.json"
   },
+  "plugin": "./app.plugin.js",
   "files": [
     "src",
     "lib",
@@ -21,6 +22,7 @@
     "ios",
     "cpp",
     "docs",
+    "app.plugin.js",
     "*.podspec",
     "react-native.config.js",
     "!ios/build",

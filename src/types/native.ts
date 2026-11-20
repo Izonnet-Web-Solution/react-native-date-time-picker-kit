@@ -128,6 +128,29 @@ export interface NativePickerOptions {
   backgroundColor?: string;
 
   /**
+   * Semi-transparent backdrop opacity on iOS (0.0 to 1.0).
+   * @default 0.4
+   */
+  backdropOpacity?: number;
+
+  /**
+   * Corner radius for ActionSheet cards on iOS.
+   * @default 14
+   */
+  cardBorderRadius?: number;
+
+  /**
+   * Whether haptic feedback is triggered on date/time changes on iOS.
+   * @default true
+   */
+  hapticFeedbackEnabled?: boolean;
+
+  /**
+   * Header text displayed above picker on iOS.
+   */
+  headerTextIOS?: string;
+
+  /**
    * Accessibility label for screen readers.
    */
   accessibilityLabel?: string;

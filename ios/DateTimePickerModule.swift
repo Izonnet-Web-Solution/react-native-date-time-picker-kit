@@ -13,6 +13,7 @@ public class DateTimePickerKitImpl: NSObject {
   private var storedTimestamp: Double = Date().timeIntervalSince1970 * 1000
   private var activeResolve: ((Any?) -> Void)?
   private var activeReject: ((String, String, Error?) -> Void)?
+  private var hapticFeedbackEnabled: Bool = true
 
   private override init() {
     super.init()
@@ -287,9 +288,13 @@ public class DateTimePickerKitImpl: NSObject {
       picker.addTarget(self, action: #selector(self.handlePickerDateChanged(_:)), for: .valueChanged)
       self.activePicker = picker
 
+      // Haptic Feedback flag
+      self.hapticFeedbackEnabled = options["hapticFeedbackEnabled"] as? Bool ?? true
+
       // Overlay Backdrop View (dimmed background)
       let overlayView = UIView()
-      overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+      let backdropOpacity = CGFloat(options["backdropOpacity"] as? Double ?? 0.4)
+      overlayView.backgroundColor = UIColor.black.withAlphaComponent(backdropOpacity)
       overlayView.translatesAutoresizingMaskIntoConstraints = false
 
       let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.handleBackdropTap))
@@ -313,9 +318,12 @@ public class DateTimePickerKitImpl: NSObject {
         }
       }
 
+      // Card Corner Radius
+      let cornerRadius = CGFloat(options["cardBorderRadius"] as? Double ?? 14.0)
+
       // Top Card (Picker + Separator + Confirm Button)
       let topCard = UIView()
-      topCard.layer.cornerRadius = 14
+      topCard.layer.cornerRadius = cornerRadius
       topCard.layer.masksToBounds = true
       topCard.backgroundColor = cardBgColor
       topCard.translatesAutoresizingMaskIntoConstraints = false
@@ -352,7 +360,7 @@ public class DateTimePickerKitImpl: NSObject {
       confirmBtn.addTarget(self, action: #selector(self.handleConfirmTap), for: .touchUpInside)
 
       // Optional Title Label
-      let titleText = options["title"] as? String
+      let titleText = options["headerTextIOS"] as? String ?? options["title"] as? String
       var titleLabel: UILabel?
       var titleSeparator: UIView?
       if let tText = titleText, !tText.isEmpty {
@@ -378,7 +386,7 @@ public class DateTimePickerKitImpl: NSObject {
 
       // Bottom Card (Cancel Button)
       let bottomCard = UIView()
-      bottomCard.layer.cornerRadius = 14
+      bottomCard.layer.cornerRadius = cornerRadius
       bottomCard.layer.masksToBounds = true
       bottomCard.backgroundColor = cardBgColor
       bottomCard.translatesAutoresizingMaskIntoConstraints = false
@@ -477,6 +485,10 @@ public class DateTimePickerKitImpl: NSObject {
 
   @objc private func handlePickerDateChanged(_ sender: UIDatePicker) {
     storedTimestamp = sender.date.timeIntervalSince1970 * 1000
+    if hapticFeedbackEnabled {
+      let generator = UIImpactFeedbackGenerator(style: .light)
+      generator.impactOccurred()
+    }
   }
 
   @objc private func handleConfirmTap() {
