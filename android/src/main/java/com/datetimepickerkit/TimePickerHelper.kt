@@ -2,6 +2,7 @@ package com.datetimepickerkit
 
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.res.Configuration
 import android.text.format.DateFormat
 import android.widget.TimePicker
 import com.facebook.react.bridge.Arguments
@@ -77,37 +78,51 @@ class TimePickerHelper(
       "default"
     }
 
-    val themeId = when (display) {
-      "spinner" -> android.R.style.Theme_DeviceDefault_Dialog_Alert
+    val isDark = (options.hasKey("isDarkModeEnabled") && options.getBoolean("isDarkModeEnabled")) ||
+      (options.hasKey("theme") && options.getString("theme") == "dark")
+
+    val themeId = when {
+      isDark -> android.R.style.Theme_DeviceDefault_Dialog_Alert
+      display == "spinner" -> android.R.style.Theme_DeviceDefault_Light_Dialog_Alert
       else -> 0
     }
 
-    val dialog = if (themeId != 0) {
-      TimePickerDialog(context, themeId, { _: TimePicker, hourOfDay: Int, minute: Int ->
-        if (!isHandled) {
-          isHandled = true
-          currentHour = hourOfDay
-          currentMinute = snapMinute(minute, minuteInterval)
-          calendar.set(Calendar.HOUR_OF_DAY, currentHour)
-          calendar.set(Calendar.MINUTE, currentMinute)
-          calendar.set(Calendar.SECOND, 0)
-          calendar.set(Calendar.MILLISECOND, 0)
-          resolveSuccess("confirmed", calendar.timeInMillis)
+    // Locale configuration support
+    val dialogContext = if (options.hasKey("locale") && !options.isNull("locale")) {
+      val localeStr = options.getString("locale")
+      if (!localeStr.isNullOrEmpty()) {
+        try {
+          val loc = Locale.forLanguageTag(localeStr.replace('_', '-'))
+          val config = Configuration(context.resources.configuration)
+          config.setLocale(loc)
+          context.createConfigurationContext(config)
+        } catch (_: Exception) {
+          context
         }
-      }, currentHour, currentMinute, is24Hour)
+      } else {
+        context
+      }
     } else {
-      TimePickerDialog(context, { _: TimePicker, hourOfDay: Int, minute: Int ->
-        if (!isHandled) {
-          isHandled = true
-          currentHour = hourOfDay
-          currentMinute = snapMinute(minute, minuteInterval)
-          calendar.set(Calendar.HOUR_OF_DAY, currentHour)
-          calendar.set(Calendar.MINUTE, currentMinute)
-          calendar.set(Calendar.SECOND, 0)
-          calendar.set(Calendar.MILLISECOND, 0)
-          resolveSuccess("confirmed", calendar.timeInMillis)
-        }
-      }, currentHour, currentMinute, is24Hour)
+      context
+    }
+
+    val timeSetListener = { _: TimePicker, hourOfDay: Int, minute: Int ->
+      if (!isHandled) {
+        isHandled = true
+        currentHour = hourOfDay
+        currentMinute = snapMinute(minute, minuteInterval)
+        calendar.set(Calendar.HOUR_OF_DAY, currentHour)
+        calendar.set(Calendar.MINUTE, currentMinute)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        resolveSuccess("confirmed", calendar.timeInMillis)
+      }
+    }
+
+    val dialog = if (themeId != 0) {
+      TimePickerDialog(dialogContext, themeId, timeSetListener, currentHour, currentMinute, is24Hour)
+    } else {
+      TimePickerDialog(dialogContext, timeSetListener, currentHour, currentMinute, is24Hour)
     }
 
     // Custom title
@@ -118,19 +133,23 @@ class TimePickerHelper(
       }
     }
 
-    // Custom buttons
-    if (options.hasKey("confirmText") && !options.isNull("confirmText")) {
-      val confirmText = options.getString("confirmText")
-      if (!confirmText.isNullOrEmpty()) {
-        dialog.setButton(TimePickerDialog.BUTTON_POSITIVE, confirmText, dialog)
-      }
+    // Custom buttons (with iOS alias fallback)
+    val confirmText = when {
+      options.hasKey("confirmText") && !options.isNull("confirmText") -> options.getString("confirmText")
+      options.hasKey("confirmTextIOS") && !options.isNull("confirmTextIOS") -> options.getString("confirmTextIOS")
+      else -> null
+    }
+    if (!confirmText.isNullOrEmpty()) {
+      dialog.setButton(TimePickerDialog.BUTTON_POSITIVE, confirmText, dialog)
     }
 
-    if (options.hasKey("cancelText") && !options.isNull("cancelText")) {
-      val cancelText = options.getString("cancelText")
-      if (!cancelText.isNullOrEmpty()) {
-        dialog.setButton(TimePickerDialog.BUTTON_NEGATIVE, cancelText, dialog)
-      }
+    val cancelText = when {
+      options.hasKey("cancelText") && !options.isNull("cancelText") -> options.getString("cancelText")
+      options.hasKey("cancelTextIOS") && !options.isNull("cancelTextIOS") -> options.getString("cancelTextIOS")
+      else -> null
+    }
+    if (!cancelText.isNullOrEmpty()) {
+      dialog.setButton(TimePickerDialog.BUTTON_NEGATIVE, cancelText, dialog)
     }
 
     dialog.setOnCancelListener {

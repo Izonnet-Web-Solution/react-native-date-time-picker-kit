@@ -2235,9 +2235,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@izonnet-web-solution/react-native-date-time-picker-kit@workspace:*, @izonnet-web-solution/react-native-date-time-picker-kit@workspace:.":
+"@izonnet-web-solution/react-native-date-time-modal@workspace:*, @izonnet-web-solution/react-native-date-time-modal@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@izonnet-web-solution/react-native-date-time-picker-kit@workspace:."
+  resolution: "@izonnet-web-solution/react-native-date-time-modal@workspace:."
   dependencies:
     "@commitlint/config-conventional": "npm:^21.2.4"
     "@eslint/compat": "npm:^2.1.1"
@@ -2265,8 +2265,8 @@ __metadata:
     turbo: "npm:^2.11.10"
     typescript: "npm:^6.0.3"
   peerDependencies:
-    react: "*"
-    react-native: "*"
+    react: ">=18.0.0"
+    react-native: ">=0.72.0"
   dependenciesMeta:
     lefthook:
       built: true
@@ -9881,7 +9881,7 @@ __metadata:
     "@babel/core": "npm:^7.25.2"
     "@babel/preset-env": "npm:^7.25.3"
     "@babel/runtime": "npm:^7.25.0"
-    "@izonnet-web-solution/react-native-date-time-picker-kit": "workspace:*"
+    "@izonnet-web-solution/react-native-date-time-modal": "workspace:*"
     "@react-native-community/cli": "npm:20.2.0"
     "@react-native-community/cli-platform-android": "npm:20.2.0"
     "@react-native-community/cli-platform-ios": "npm:20.2.0"

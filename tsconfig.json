@@ -2,6 +2,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "paths": {
+      "@izonnet-web-solution-react-native-date-time-modal": ["./src/index"],
       "@izonnet-web-solution/react-native-date-time-picker-kit": ["./src/index"],
       "react-native-date-time-picker-kit": ["./src/index"]
     },

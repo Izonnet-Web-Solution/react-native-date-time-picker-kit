@@ -166,42 +166,116 @@ export function clampDate(
   return new Date(d.getTime());
 }
 
+function parseTimeComponents(
+  val: unknown
+): { hour: number; minute: number; second?: number } | null {
+  if (!val) return null;
+  if (typeof val === 'string') {
+    const match = val.trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (match && match[1] && match[2]) {
+      return {
+        hour: parseInt(match[1], 10),
+        minute: parseInt(match[2], 10),
+        second: match[3] ? parseInt(match[3], 10) : 0,
+      };
+    }
+  }
+  if (
+    typeof val === 'object' &&
+    val !== null &&
+    'hour' in val &&
+    'minute' in val
+  ) {
+    const obj = val as any;
+    return {
+      hour: Number(obj.hour),
+      minute: Number(obj.minute),
+      second: obj.second !== undefined ? Number(obj.second) : 0,
+    };
+  }
+  const parsedDate = parseDate(val);
+  if (parsedDate) {
+    return {
+      hour: parsedDate.getHours(),
+      minute: parsedDate.getMinutes(),
+      second: parsedDate.getSeconds(),
+    };
+  }
+  return null;
+}
+
 /**
  * Dynamically clamps a date's time components (hour, minute) if date falls on the
- * same calendar day as minimumDate or maximumDate.
+ * same calendar day as minimumDate or maximumDate, or against min/max time strings.
  */
 export function clampTime(
   date: Date,
-  minDate?: unknown,
-  maxDate?: unknown
+  minTime?: unknown,
+  maxTime?: unknown
 ): Date {
   const result = new Date(date.getTime());
   const dateStr = serializeDateOnly(result);
 
-  if (minDate !== undefined && minDate !== null) {
-    const min = parseDate(minDate);
-    if (min && serializeDateOnly(min) === dateStr) {
-      if (result.getHours() < min.getHours()) {
-        result.setHours(min.getHours(), min.getMinutes(), min.getSeconds());
-      } else if (
-        result.getHours() === min.getHours() &&
-        result.getMinutes() < min.getMinutes()
-      ) {
-        result.setMinutes(min.getMinutes(), min.getSeconds());
+  if (minTime !== undefined && minTime !== null) {
+    const minParsed = parseDate(minTime);
+    if (minParsed && typeof minTime !== 'string') {
+      if (serializeDateOnly(minParsed) === dateStr) {
+        if (result.getHours() < minParsed.getHours()) {
+          result.setHours(
+            minParsed.getHours(),
+            minParsed.getMinutes(),
+            minParsed.getSeconds()
+          );
+        } else if (
+          result.getHours() === minParsed.getHours() &&
+          result.getMinutes() < minParsed.getMinutes()
+        ) {
+          result.setMinutes(minParsed.getMinutes(), minParsed.getSeconds());
+        }
+      }
+    } else {
+      const minComp = parseTimeComponents(minTime);
+      if (minComp) {
+        if (result.getHours() < minComp.hour) {
+          result.setHours(minComp.hour, minComp.minute, minComp.second ?? 0);
+        } else if (
+          result.getHours() === minComp.hour &&
+          result.getMinutes() < minComp.minute
+        ) {
+          result.setMinutes(minComp.minute, minComp.second ?? 0);
+        }
       }
     }
   }
 
-  if (maxDate !== undefined && maxDate !== null) {
-    const max = parseDate(maxDate);
-    if (max && serializeDateOnly(max) === dateStr) {
-      if (result.getHours() > max.getHours()) {
-        result.setHours(max.getHours(), max.getMinutes(), max.getSeconds());
-      } else if (
-        result.getHours() === max.getHours() &&
-        result.getMinutes() > max.getMinutes()
-      ) {
-        result.setMinutes(max.getMinutes(), max.getSeconds());
+  if (maxTime !== undefined && maxTime !== null) {
+    const maxParsed = parseDate(maxTime);
+    if (maxParsed && typeof maxTime !== 'string') {
+      if (serializeDateOnly(maxParsed) === dateStr) {
+        if (result.getHours() > maxParsed.getHours()) {
+          result.setHours(
+            maxParsed.getHours(),
+            maxParsed.getMinutes(),
+            maxParsed.getSeconds()
+          );
+        } else if (
+          result.getHours() === maxParsed.getHours() &&
+          result.getMinutes() > maxParsed.getMinutes()
+        ) {
+          result.setMinutes(maxParsed.getMinutes(), maxParsed.getSeconds());
+        }
+      }
+    } else {
+      const maxComp = parseTimeComponents(maxTime);
+      if (maxComp) {
+        if (result.getHours() > maxComp.hour) {
+          result.setHours(maxComp.hour, maxComp.minute, maxComp.second ?? 0);
+        } else if (
+          result.getHours() === maxComp.hour &&
+          result.getMinutes() > maxComp.minute
+        ) {
+          result.setMinutes(maxComp.minute, maxComp.second ?? 0);
+        }
       }
     }
   }

@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.app.Dialog
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.res.Configuration
 import android.text.format.DateFormat
 import android.widget.DatePicker
 import android.widget.TimePicker
@@ -52,25 +53,76 @@ class DateTimePickerHelper(
     return currentDialog!!
   }
 
+  private fun getDialogContext(): Context {
+    return if (options.hasKey("locale") && !options.isNull("locale")) {
+      val localeStr = options.getString("locale")
+      if (!localeStr.isNullOrEmpty()) {
+        try {
+          val loc = Locale.forLanguageTag(localeStr.replace('_', '-'))
+          val config = Configuration(context.resources.configuration)
+          config.setLocale(loc)
+          context.createConfigurationContext(config)
+        } catch (_: Exception) {
+          context
+        }
+      } else {
+        context
+      }
+    } else {
+      context
+    }
+  }
+
+  private fun getThemeId(): Int {
+    val isDark = (options.hasKey("isDarkModeEnabled") && options.getBoolean("isDarkModeEnabled")) ||
+      (options.hasKey("theme") && options.getString("theme") == "dark")
+    val display = if (options.hasKey("display") && !options.isNull("display")) options.getString("display") else "default"
+
+    return when {
+      isDark -> android.R.style.Theme_DeviceDefault_Dialog_Alert
+      display == "spinner" -> android.R.style.Theme_DeviceDefault_Light_Dialog_Alert
+      else -> 0
+    }
+  }
+
   private fun showDateStep() {
     val year = calendar.get(Calendar.YEAR)
     val month = calendar.get(Calendar.MONTH)
     val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val dialogCtx = getDialogContext()
+    val themeId = getThemeId()
 
-    val dateDialog = DatePickerDialog(context, { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
+    val dateSetListener = { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
       calendar.set(Calendar.YEAR, selectedYear)
       calendar.set(Calendar.MONTH, selectedMonth)
       calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
       isTransitioningToTime = true
       showTimeStep()
-    }, year, month, day)
-
-    if (options.hasKey("minimumDate") && !options.isNull("minimumDate")) {
-      dateDialog.datePicker.minDate = options.getDouble("minimumDate").toLong()
     }
 
-    if (options.hasKey("maximumDate") && !options.isNull("maximumDate")) {
-      dateDialog.datePicker.maxDate = options.getDouble("maximumDate").toLong()
+    val dateDialog = if (themeId != 0) {
+      DatePickerDialog(dialogCtx, themeId, dateSetListener, year, month, day)
+    } else {
+      DatePickerDialog(dialogCtx, dateSetListener, year, month, day)
+    }
+
+    val minDate = if (options.hasKey("minimumDate") && !options.isNull("minimumDate")) {
+      options.getDouble("minimumDate").toLong()
+    } else null
+
+    val maxDate = if (options.hasKey("maximumDate") && !options.isNull("maximumDate")) {
+      options.getDouble("maximumDate").toLong()
+    } else null
+
+    if (minDate != null && maxDate != null) {
+      if (minDate <= maxDate) {
+        dateDialog.datePicker.minDate = minDate
+        dateDialog.datePicker.maxDate = maxDate
+      }
+    } else if (minDate != null) {
+      dateDialog.datePicker.minDate = minDate
+    } else if (maxDate != null) {
+      dateDialog.datePicker.maxDate = maxDate
     }
 
     val title = if (options.hasKey("title") && !options.isNull("title")) {
@@ -80,6 +132,15 @@ class DateTimePickerHelper(
     }
     if (!title.isNullOrEmpty()) {
       dateDialog.setTitle(title)
+    }
+
+    val cancelText = when {
+      options.hasKey("cancelText") && !options.isNull("cancelText") -> options.getString("cancelText")
+      options.hasKey("cancelTextIOS") && !options.isNull("cancelTextIOS") -> options.getString("cancelTextIOS")
+      else -> null
+    }
+    if (!cancelText.isNullOrEmpty()) {
+      dateDialog.setButton(DatePickerDialog.BUTTON_NEGATIVE, cancelText, dateDialog)
     }
 
     dateDialog.setOnCancelListener {
@@ -108,6 +169,8 @@ class DateTimePickerHelper(
 
     val hour = calendar.get(Calendar.HOUR_OF_DAY)
     val minute = calendar.get(Calendar.MINUTE)
+    val dialogCtx = getDialogContext()
+    val themeId = getThemeId()
 
     val minuteInterval = if (options.hasKey("minuteInterval") && !options.isNull("minuteInterval")) {
       options.getInt("minuteInterval")
@@ -121,7 +184,7 @@ class DateTimePickerHelper(
       DateFormat.is24HourFormat(context)
     }
 
-    val timeDialog = TimePickerDialog(context, { _: TimePicker, hourOfDay: Int, minuteOfHour: Int ->
+    val timeSetListener = { _: TimePicker, hourOfDay: Int, minuteOfHour: Int ->
       if (!isHandled) {
         isHandled = true
         val snappedMinute = snapMinute(minuteOfHour, minuteInterval)
@@ -131,9 +194,33 @@ class DateTimePickerHelper(
         calendar.set(Calendar.MILLISECOND, 0)
         resolveSuccess("confirmed", calendar.timeInMillis)
       }
-    }, hour, minute, is24Hour)
+    }
+
+    val timeDialog = if (themeId != 0) {
+      TimePickerDialog(dialogCtx, themeId, timeSetListener, hour, minute, is24Hour)
+    } else {
+      TimePickerDialog(dialogCtx, timeSetListener, hour, minute, is24Hour)
+    }
 
     timeDialog.setTitle("Select Time")
+
+    val confirmText = when {
+      options.hasKey("confirmText") && !options.isNull("confirmText") -> options.getString("confirmText")
+      options.hasKey("confirmTextIOS") && !options.isNull("confirmTextIOS") -> options.getString("confirmTextIOS")
+      else -> null
+    }
+    if (!confirmText.isNullOrEmpty()) {
+      timeDialog.setButton(TimePickerDialog.BUTTON_POSITIVE, confirmText, timeDialog)
+    }
+
+    val cancelText = when {
+      options.hasKey("cancelText") && !options.isNull("cancelText") -> options.getString("cancelText")
+      options.hasKey("cancelTextIOS") && !options.isNull("cancelTextIOS") -> options.getString("cancelTextIOS")
+      else -> null
+    }
+    if (!cancelText.isNullOrEmpty()) {
+      timeDialog.setButton(TimePickerDialog.BUTTON_NEGATIVE, cancelText, timeDialog)
+    }
 
     timeDialog.setOnCancelListener {
       if (!isHandled) {

@@ -181,3 +181,11 @@ export function formatTime(
   d.setHours(hour, minute, 0, 0);
   return formatDate(d, is24 ? 'HH:mm' : 'hh:mm A');
 }
+
+export function formatLocalized(
+  date: Date,
+  formatStr: string = 'YYYY-MM-DD',
+  locale?: string
+): string {
+  return formatDate(date, formatStr, locale);
+}

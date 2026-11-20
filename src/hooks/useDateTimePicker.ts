@@ -24,7 +24,10 @@ export function useDateTimePicker(
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [value, setValueState] = useState<Date>(
     () =>
-      parseDate(options.value) || parseDate(options.defaultValue) || new Date()
+      parseDate(options.date) ||
+      parseDate(options.value) ||
+      parseDate(options.defaultValue) ||
+      new Date()
   );
   const [error, setError] = useState<DateTimePickerError | null>(null);
 

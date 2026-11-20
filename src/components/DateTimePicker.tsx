@@ -7,13 +7,9 @@ import {
   useRef,
   useState,
 } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { DateTimePickerError } from '../errors/DateTimePickerError';
-import { useLocale } from '../localization';
 import { NativeDateTimePicker } from '../native/NativeDateTimePicker';
-import { type DatePreset, getStandardSinglePresets } from '../presets';
-import { useTheme } from '../theme';
-import type { ResolvedTheme, ThemeConfig } from '../theme/types';
 import type {
   DateTimePickerProps,
   DateTimePickerRef,
@@ -24,23 +20,15 @@ import type {
 } from '../types';
 import {
   clampDate,
-  clampTime,
   dateToTimestamp,
   normalizeDateWithTimezone,
   parseDate,
   timestampToDate,
 } from '../utils/dateConversion';
 import {
-  isDateDisabled,
   validateDateRange,
   validateMinuteInterval,
 } from '../utils/dateValidation';
-import { CalendarPicker } from './CalendarPicker';
-import { ClockPicker } from './ClockPicker';
-import { ModalWrapper } from './common/ModalWrapper';
-import { PickerHeader } from './common/PickerHeader';
-import { PresetsBar } from './common/PresetsBar';
-import { WheelPicker } from './WheelPicker';
 
 export const DateTimePicker = forwardRef<
   DateTimePickerRef,
@@ -49,196 +37,142 @@ export const DateTimePicker = forwardRef<
   const {
     mode = 'date',
     value: propValue,
+    date: propDate,
     defaultValue,
     display = 'default',
     disabled = false,
-    presentation = 'native',
     minimumDate,
     maximumDate,
     minuteInterval,
-    disabledDates,
-    disabledWeekdays,
-    markedDates,
-    firstDayOfWeek,
     locale: propLocale,
     timeZoneOffsetInMinutes,
     is24Hour,
     theme: propTheme = 'auto',
+    isDarkModeEnabled,
     title,
     confirmText,
+    confirmTextIOS,
     cancelText,
+    cancelTextIOS,
     accentColor,
+    accentColorIOS,
+    buttonTextColor,
+    buttonTextColorIOS,
     textColor,
     backgroundColor,
-    showPresets = false,
-    customPresets,
     onChange,
     onConfirm,
     onCancel,
+    onHide,
     onDismiss,
     onOpen,
     onError,
     open: propOpen,
-    backdropOpacity,
-    animationType,
-    showHandle,
-    closeOnBackdropPress,
+    isVisible: propIsVisible,
     testID,
+    accessible,
+    accessibilityLabel,
+    accessibilityHint,
+    accessibilityRole,
   } = props;
 
+  const effectiveValue = propDate !== undefined ? propDate : propValue;
   const effectiveMinDate = minimumDate ?? props.minDate;
   const effectiveMaxDate = maximumDate ?? props.maxDate;
   const effectiveTimeZone = props.timeZone ?? props.timeZoneName;
+  const effectiveConfirmText = confirmText ?? confirmTextIOS;
+  const effectiveCancelText = cancelText ?? cancelTextIOS;
+  const effectiveAccentColor = accentColor ?? accentColorIOS;
+  const effectiveButtonTextColor = buttonTextColor ?? buttonTextColorIOS;
+
   const effectiveOffsetMinutes =
     timeZoneOffsetInMinutes !== undefined
       ? timeZoneOffsetInMinutes
       : props.utcOffset !== undefined
         ? Math.abs(props.utcOffset) <= 14
-          ? props.utcOffset * 60
-          : props.utcOffset
+          ? Math.round(props.utcOffset * 60)
+          : Math.round(props.utcOffset)
         : undefined;
 
-  const effectiveOpen =
-    propOpen !== undefined
-      ? propOpen
-      : props.isVisible !== undefined
-        ? props.isVisible
-        : props.visible !== undefined
-          ? props.visible
-          : undefined;
+  const resolvedInitialDate = useMemo(() => {
+    const raw = effectiveValue ?? defaultValue ?? new Date();
+    const parsed = parseDate(raw) ?? new Date();
+    return clampDate(parsed, effectiveMinDate, effectiveMaxDate) ?? parsed;
+  }, [effectiveValue, defaultValue, effectiveMinDate, effectiveMaxDate]);
 
-  // Track internal date state with bounds clamping and timezone normalization
-  const initialDate = useMemo(() => {
-    let d = parseDate(propValue) || parseDate(defaultValue) || new Date();
-    if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
-      d = normalizeDateWithTimezone(
-        d,
-        effectiveTimeZone,
-        effectiveOffsetMinutes
-      );
-    }
-    const clamped = clampDate(d, effectiveMinDate, effectiveMaxDate);
-    return clamped ? clampTime(clamped, effectiveMinDate, effectiveMaxDate) : d;
-  }, [
-    propValue,
-    defaultValue,
-    effectiveTimeZone,
-    effectiveOffsetMinutes,
-    effectiveMinDate,
-    effectiveMaxDate,
-  ]);
-
-  const [currentDate, setCurrentDate] = useState<Date>(initialDate);
+  const [currentDate, setCurrentDate] = useState<Date>(resolvedInitialDate);
   const isOpenRef = useRef<boolean>(false);
-  const dateRef = useRef<Date>(currentDate);
+  const isOpeningRef = useRef<boolean>(false);
+  const internalDateRef = useRef<Date>(resolvedInitialDate);
+  internalDateRef.current = currentDate;
 
-  // JS modal presentation state
-  const [isJsModalVisible, setIsJsModalVisible] = useState(false);
-  const [dateTimeTab, setDateTimeTab] = useState<'date' | 'time'>('date');
-  const [activePresetId, setActivePresetId] = useState<string | undefined>();
+  const isControlledVisible =
+    propIsVisible !== undefined || propOpen !== undefined;
+  const effectiveVisible = Boolean(propIsVisible ?? propOpen);
 
-  // Theme & Locale with custom overrides
-  const themeInput = useMemo(() => {
-    let base: ThemeConfig =
-      typeof propTheme === 'object'
-        ? { ...propTheme }
-        : ({ mode: propTheme } as ThemeConfig);
-
-    if (props.themeColors) {
-      base = {
-        ...base,
-        themeColors: {
-          ...base.themeColors,
-          ...props.themeColors,
-        },
-      };
-    }
-    if (accentColor || textColor || backgroundColor) {
-      base = {
-        ...base,
-        colors: {
-          ...base.colors,
-          ...(accentColor && {
-            accent: accentColor,
-            primary: accentColor,
-            selected: accentColor,
-          }),
-          ...(textColor && { text: textColor }),
-          ...(backgroundColor && {
-            background: backgroundColor,
-            modalBackground: backgroundColor,
-          }),
-        },
-      };
-    }
-    return base;
-  }, [propTheme, props.themeColors, accentColor, textColor, backgroundColor]);
-
-  const resolvedTheme: ResolvedTheme = useTheme(themeInput);
-  const localeData = useLocale(propLocale);
-
-  // Keep dateRef synced
   useEffect(() => {
-    dateRef.current = currentDate;
-  }, [currentDate]);
-
-  // Update if propValue changes
-  useEffect(() => {
-    if (propValue !== undefined && propValue !== null) {
-      let parsed = parseDate(propValue);
+    if (effectiveValue !== undefined && effectiveValue !== null) {
+      const parsed = parseDate(effectiveValue);
       if (parsed) {
-        if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
-          parsed = normalizeDateWithTimezone(
-            parsed,
-            effectiveTimeZone,
-            effectiveOffsetMinutes
-          );
-        }
-        const clamped = clampDate(parsed, effectiveMinDate, effectiveMaxDate);
-        const finalDate = clamped
-          ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
-          : parsed;
-        setCurrentDate(finalDate);
-        dateRef.current = finalDate;
+        const clamped =
+          clampDate(parsed, effectiveMinDate, effectiveMaxDate) ?? parsed;
+        setCurrentDate(clamped);
       }
     }
-  }, [
-    propValue,
-    effectiveTimeZone,
-    effectiveOffsetMinutes,
-    effectiveMinDate,
-    effectiveMaxDate,
-  ]);
+  }, [effectiveValue, effectiveMinDate, effectiveMaxDate]);
 
-  const buildNativeOptions = useCallback(
+  const serializeOptions = useCallback(
     (targetDate: Date): NativePickerOptions => {
-      const minTimestamp = effectiveMinDate
+      const ts = dateToTimestamp(targetDate) ?? Date.now();
+      const rawMinTs = effectiveMinDate
         ? dateToTimestamp(effectiveMinDate)
         : undefined;
-      const maxTimestamp = effectiveMaxDate
+      const rawMaxTs = effectiveMaxDate
         ? dateToTimestamp(effectiveMaxDate)
         : undefined;
+      const minTs = rawMinTs ?? undefined;
+      const maxTs = rawMaxTs ?? undefined;
 
-      const nativeTheme: NativePickerTheme =
-        typeof propTheme === 'string' &&
-        (propTheme === 'light' || propTheme === 'dark' || propTheme === 'auto')
-          ? propTheme
-          : 'auto';
+      let resolvedTheme: NativePickerTheme = 'auto';
+      if (isDarkModeEnabled !== undefined) {
+        resolvedTheme = isDarkModeEnabled ? 'dark' : 'light';
+      } else if (typeof propTheme === 'string') {
+        resolvedTheme = propTheme as NativePickerTheme;
+      } else if (propTheme && typeof propTheme === 'object') {
+        resolvedTheme = (propTheme.mode as NativePickerTheme) ?? 'auto';
+      }
+
+      const localeStr =
+        typeof propLocale === 'string'
+          ? propLocale
+          : propLocale &&
+              typeof propLocale === 'object' &&
+              'languageTag' in propLocale
+            ? (propLocale as any).languageTag
+            : undefined;
 
       return {
-        value: targetDate.getTime(),
-        minimumDate: minTimestamp ?? undefined,
-        maximumDate: maxTimestamp ?? undefined,
+        value: ts,
+        mode: mode === 'datetime' ? 'datetime' : mode,
         display,
-        locale: typeof propLocale === 'string' ? propLocale : propLocale?.code,
-        timeZoneOffsetInMinutes: effectiveOffsetMinutes,
-        is24Hour,
+        minimumDate: minTs,
+        maximumDate: maxTs,
         minuteInterval,
+        locale: localeStr,
+        timeZoneOffsetInMinutes: effectiveOffsetMinutes,
+        timeZone: effectiveTimeZone,
+        is24Hour,
+        theme: resolvedTheme,
+        isDarkModeEnabled: isDarkModeEnabled ?? resolvedTheme === 'dark',
         title,
-        confirmText,
-        cancelText,
-        theme: nativeTheme,
-        accentColor,
+        confirmText: effectiveConfirmText,
+        confirmTextIOS: effectiveConfirmText,
+        cancelText: effectiveCancelText,
+        cancelTextIOS: effectiveCancelText,
+        accentColor: effectiveAccentColor,
+        accentColorIOS: effectiveAccentColor,
+        buttonTextColor: effectiveButtonTextColor,
+        buttonTextColorIOS: effectiveButtonTextColor,
         textColor,
         backgroundColor,
       };
@@ -246,783 +180,402 @@ export const DateTimePicker = forwardRef<
     [
       effectiveMinDate,
       effectiveMaxDate,
-      display,
-      propLocale,
-      effectiveOffsetMinutes,
-      is24Hour,
-      minuteInterval,
-      title,
-      confirmText,
-      cancelText,
+      isDarkModeEnabled,
       propTheme,
-      accentColor,
+      propLocale,
+      mode,
+      display,
+      minuteInterval,
+      effectiveOffsetMinutes,
+      effectiveTimeZone,
+      is24Hour,
+      title,
+      effectiveConfirmText,
+      effectiveCancelText,
+      effectiveAccentColor,
+      effectiveButtonTextColor,
       textColor,
       backgroundColor,
     ]
   );
 
-  const openPicker = useCallback(async (): Promise<Date | null> => {
+  const openNativePicker = useCallback(async (): Promise<Date | null> => {
     if (disabled) {
-      const err = new DateTimePickerError(
-        'UNKNOWN_ERROR',
-        'Cannot open picker: component is disabled.'
-      );
-      onError?.(err);
       return null;
     }
 
-    if (minuteInterval !== undefined) {
-      if (!validateMinuteInterval(minuteInterval)) {
-        const err = new DateTimePickerError(
-          'INVALID_MINUTE_INTERVAL',
-          `minuteInterval must be a positive integer that evenly divides 60. Received: ${minuteInterval}`
-        );
-        onError?.(err);
-        throw err;
-      }
-    }
-
-    if (effectiveMinDate && effectiveMaxDate) {
-      if (!validateDateRange(effectiveMinDate, effectiveMaxDate)) {
-        const err = new DateTimePickerError(
-          'DATE_OUT_OF_RANGE',
-          'minimumDate cannot be after maximumDate.'
-        );
-        onError?.(err);
-        throw err;
-      }
-    }
-
-    // Presentation: JS Modal / Bottom Sheet / Fullscreen
-    if (presentation !== 'native') {
-      setIsJsModalVisible(true);
-      setDateTimeTab('date');
-      isOpenRef.current = true;
-      onOpen?.();
+    if (isOpenRef.current || isOpeningRef.current) {
       return null;
     }
-
-    // Presentation: Native (TurboModule)
-    if (isOpenRef.current) {
-      const err = new DateTimePickerError(
-        'PICKER_ALREADY_OPEN',
-        'A native picker dialog is already active.'
-      );
-      onError?.(err);
-      throw err;
-    }
-
-    isOpenRef.current = true;
-    onOpen?.();
-
-    const targetDate = dateRef.current;
-    const nativeOptions = buildNativeOptions(targetDate);
 
     try {
-      let result: { action: NativePickerAction; timestamp: number };
-
-      switch (mode) {
-        case 'time':
-          result = await NativeDateTimePicker.openTimePicker(nativeOptions);
-          break;
-        case 'datetime':
-          result = await NativeDateTimePicker.openDateTimePicker(nativeOptions);
-          break;
-        case 'countdown':
-          result =
-            await NativeDateTimePicker.openCountdownPicker(nativeOptions);
-          break;
-        case 'date':
-        default:
-          result = await NativeDateTimePicker.openDatePicker(nativeOptions);
-          break;
+      if (
+        effectiveMinDate &&
+        effectiveMaxDate &&
+        !validateDateRange(effectiveMinDate, effectiveMaxDate)
+      ) {
+        throw new DateTimePickerError(
+          'DATE_OUT_OF_RANGE',
+          'minimumDate cannot be later than maximumDate.'
+        );
+      }
+      if (
+        minuteInterval !== undefined &&
+        !validateMinuteInterval(minuteInterval)
+      ) {
+        throw new DateTimePickerError(
+          'INVALID_MINUTE_INTERVAL',
+          `Minute interval ${minuteInterval} is invalid. Must be one of 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30.`
+        );
       }
 
-      const action = result.action;
-      if (action === 'confirmed') {
-        const selectedDate = timestampToDate(result.timestamp);
+      isOpeningRef.current = true;
+      const opts = serializeOptions(internalDateRef.current ?? new Date());
+      onOpen?.();
 
-        if (isDateDisabled(selectedDate, disabledDates, disabledWeekdays)) {
-          const err = new DateTimePickerError(
-            'DATE_OUT_OF_RANGE',
-            'Selected date is in disabledDates or disabledWeekdays.'
-          );
-          onError?.(err);
-        }
+      let result: { action: NativePickerAction; timestamp?: number };
 
-        setCurrentDate(selectedDate);
-        dateRef.current = selectedDate;
-        onChange?.(selectedDate);
-        onConfirm?.(selectedDate);
-        return selectedDate;
-      } else if (action === 'cancelled') {
-        onCancel?.();
-        return null;
+      if (mode === 'date') {
+        result = await NativeDateTimePicker.openDatePicker(opts);
+      } else if (mode === 'time') {
+        result = await NativeDateTimePicker.openTimePicker(opts);
+      } else if (mode === 'datetime') {
+        result = await NativeDateTimePicker.openDateTimePicker(opts);
+      } else if (mode === 'countdown') {
+        result = await NativeDateTimePicker.openCountdownPicker(opts);
       } else {
+        result = await NativeDateTimePicker.openDatePicker(opts);
+      }
+
+      isOpenRef.current = false;
+      isOpeningRef.current = false;
+
+      if (result.action === 'confirmed' && result.timestamp != null) {
+        let confirmedDate = timestampToDate(result.timestamp);
+        if (effectiveTimeZone) {
+          confirmedDate = normalizeDateWithTimezone(
+            confirmedDate,
+            effectiveTimeZone
+          );
+        }
+        confirmedDate =
+          clampDate(confirmedDate, effectiveMinDate, effectiveMaxDate) ??
+          confirmedDate;
+
+        setCurrentDate(confirmedDate);
+        onChange?.(confirmedDate);
+        onConfirm?.(confirmedDate);
+        onHide?.(true, confirmedDate);
+        return confirmedDate;
+      } else {
+        onCancel?.();
         onDismiss?.();
+        onHide?.(false);
         return null;
       }
-    } catch (error) {
-      const normalized =
-        error instanceof DateTimePickerError
-          ? error
-          : new DateTimePickerError(
-              'UNKNOWN_ERROR',
-              error instanceof Error ? error.message : 'Unknown error',
-              error
-            );
-      onError?.(normalized);
-      throw normalized;
-    } finally {
+    } catch (err: any) {
       isOpenRef.current = false;
+      isOpeningRef.current = false;
+      const errorObj =
+        err instanceof DateTimePickerError
+          ? err
+          : new DateTimePickerError(
+              'PRESENTATION_FAILED',
+              err?.message || 'Failed to display picker'
+            );
+      onError?.(errorObj);
+      onHide?.(false);
+      return null;
     }
   }, [
     disabled,
-    minuteInterval,
     effectiveMinDate,
     effectiveMaxDate,
-    presentation,
+    minuteInterval,
+    serializeOptions,
     onOpen,
-    buildNativeOptions,
     mode,
-    disabledDates,
-    disabledWeekdays,
+    effectiveTimeZone,
     onChange,
     onConfirm,
+    onHide,
     onCancel,
     onDismiss,
     onError,
   ]);
 
-  const closePicker = useCallback(async (): Promise<boolean> => {
-    if (presentation !== 'native') {
-      setIsJsModalVisible(false);
-      isOpenRef.current = false;
-      onDismiss?.();
-      return true;
-    }
-
-    if (!isOpenRef.current) {
-      return false;
-    }
+  const closeNativePicker = useCallback(async (): Promise<boolean> => {
     try {
       const closed = await NativeDateTimePicker.closePicker();
       isOpenRef.current = false;
-      onDismiss?.();
+      isOpeningRef.current = false;
       return closed;
-    } catch (error) {
-      const normalized =
-        error instanceof DateTimePickerError
-          ? error
-          : new DateTimePickerError(
-              'UNKNOWN_ERROR',
-              error instanceof Error ? error.message : 'Failed to close picker',
-              error
-            );
-      onError?.(normalized);
+    } catch {
+      isOpenRef.current = false;
+      isOpeningRef.current = false;
       return false;
     }
-  }, [presentation, onDismiss, onError]);
-
-  const confirmProgrammatic = useCallback(async (): Promise<Date | null> => {
-    if (presentation !== 'native') {
-      const selectedDate = dateRef.current;
-      setIsJsModalVisible(false);
-      isOpenRef.current = false;
-      onChange?.(selectedDate);
-      onConfirm?.(selectedDate);
-      return selectedDate;
-    }
-
-    try {
-      const result = await NativeDateTimePicker.confirmPicker();
-      const selectedDate = timestampToDate(result.timestamp);
-      setCurrentDate(selectedDate);
-      dateRef.current = selectedDate;
-      isOpenRef.current = false;
-      onChange?.(selectedDate);
-      onConfirm?.(selectedDate);
-      return selectedDate;
-    } catch (error) {
-      const normalized =
-        error instanceof DateTimePickerError
-          ? error
-          : new DateTimePickerError(
-              'PICKER_NOT_OPEN',
-              error instanceof Error
-                ? error.message
-                : 'Picker is not currently open to confirm',
-              error
-            );
-      onError?.(normalized);
-      return null;
-    }
-  }, [presentation, onChange, onConfirm, onError]);
-
-  const cancelProgrammatic = useCallback(async (): Promise<boolean> => {
-    if (presentation !== 'native') {
-      setIsJsModalVisible(false);
-      isOpenRef.current = false;
-      onCancel?.();
-      return true;
-    }
-
-    try {
-      const cancelled = await NativeDateTimePicker.cancelPicker();
-      isOpenRef.current = false;
-      onCancel?.();
-      return cancelled;
-    } catch (error) {
-      const normalized =
-        error instanceof DateTimePickerError
-          ? error
-          : new DateTimePickerError(
-              'PICKER_NOT_OPEN',
-              error instanceof Error
-                ? error.message
-                : 'Picker is not currently open to cancel',
-              error
-            );
-      onError?.(normalized);
-      return false;
-    }
-  }, [presentation, onCancel, onError]);
-
-  const reset = useCallback(() => {
-    setCurrentDate(initialDate);
-    dateRef.current = initialDate;
-    setActivePresetId(undefined);
-  }, [initialDate]);
-
-  const getValue = useCallback((): Date | null => {
-    return dateRef.current;
   }, []);
 
-  const setValue = useCallback(
-    (date: Date | number | string) => {
-      let parsed = parseDate(date);
-      if (parsed) {
-        if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
-          parsed = normalizeDateWithTimezone(
-            parsed,
-            effectiveTimeZone,
-            effectiveOffsetMinutes
-          );
-        }
-        const clamped = clampDate(parsed, effectiveMinDate, effectiveMaxDate);
-        const finalDate = clamped
-          ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
-          : parsed;
-        setCurrentDate(finalDate);
-        dateRef.current = finalDate;
+  const confirmPicker = useCallback(async (): Promise<Date | null> => {
+    try {
+      const result = await NativeDateTimePicker.confirmPicker();
+      if (result.action === 'confirmed' && result.timestamp != null) {
+        const confirmedDate = timestampToDate(result.timestamp);
+        setCurrentDate(confirmedDate);
+        onConfirm?.(confirmedDate);
+        onHide?.(true, confirmedDate);
+        return confirmedDate;
       }
-    },
-    [
-      effectiveTimeZone,
-      effectiveOffsetMinutes,
-      effectiveMinDate,
-      effectiveMaxDate,
-    ]
-  );
+      return null;
+    } catch {
+      return null;
+    }
+  }, [onConfirm, onHide]);
 
-  // Imperative handle
+  const cancelPicker = useCallback(async (): Promise<boolean> => {
+    try {
+      const success = await NativeDateTimePicker.cancelPicker();
+      onCancel?.();
+      onHide?.(false);
+      return success;
+    } catch {
+      return false;
+    }
+  }, [onCancel, onHide]);
+
   useImperativeHandle(
     ref,
     () => ({
-      open: openPicker,
-      close: closePicker,
-      confirm: confirmProgrammatic,
-      cancel: cancelProgrammatic,
-      reset,
-      getValue,
-      setValue,
+      open: () => openNativePicker(),
+      close: () => closeNativePicker(),
+      confirm: () => confirmPicker(),
+      cancel: () => cancelPicker(),
+      reset: () => {
+        const resetVal = defaultValue
+          ? (parseDate(defaultValue) ?? new Date())
+          : new Date();
+        const clamped =
+          clampDate(resetVal, effectiveMinDate, effectiveMaxDate) ?? resetVal;
+        setCurrentDate(clamped);
+      },
+      getValue: () => currentDate,
+      setValue: (val: Date | number | string) => {
+        const parsed = parseDate(val);
+        if (parsed) {
+          const clamped =
+            clampDate(parsed, effectiveMinDate, effectiveMaxDate) ?? parsed;
+          setCurrentDate(clamped);
+          const ts = dateToTimestamp(clamped);
+          if (ts) {
+            NativeDateTimePicker.setSelectedDate(ts).catch(() => {});
+          }
+        }
+      },
     }),
     [
-      openPicker,
-      closePicker,
-      confirmProgrammatic,
-      cancelProgrammatic,
-      reset,
-      getValue,
-      setValue,
+      openNativePicker,
+      closeNativePicker,
+      confirmPicker,
+      cancelPicker,
+      defaultValue,
+      effectiveMinDate,
+      effectiveMaxDate,
+      currentDate,
     ]
   );
 
-  // Declarative open prop support
   useEffect(() => {
-    if (effectiveOpen === true && !isOpenRef.current) {
-      openPicker().catch(() => {});
-    } else if (effectiveOpen === false && isOpenRef.current) {
-      closePicker().catch(() => {});
-    }
-  }, [effectiveOpen, openPicker, closePicker]);
+    if (!isControlledVisible) return;
 
-  // Presets handling
-  const presets = useMemo(() => {
-    if (!showPresets) return [];
-    return customPresets || getStandardSinglePresets();
-  }, [showPresets, customPresets]);
-
-  const handleSelectPreset = useCallback(
-    (preset: DatePreset) => {
-      setActivePresetId(preset.id);
-      const val = preset.getValue();
-      if (val instanceof Date) {
-        let updated = val;
-        if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
-          updated = normalizeDateWithTimezone(
-            updated,
-            effectiveTimeZone,
-            effectiveOffsetMinutes
-          );
-        }
-        const clamped = clampDate(updated, effectiveMinDate, effectiveMaxDate);
-        const finalDate = clamped
-          ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
-          : updated;
-        setCurrentDate(finalDate);
-        dateRef.current = finalDate;
-        onChange?.(finalDate);
+    if (effectiveVisible) {
+      if (!isOpenRef.current && !isOpeningRef.current) {
+        openNativePicker();
       }
-    },
-    [
-      effectiveTimeZone,
-      effectiveOffsetMinutes,
-      effectiveMinDate,
-      effectiveMaxDate,
-      onChange,
-    ]
-  );
-
-  const handleJsDateChange = useCallback(
-    (newDate: Date) => {
-      setActivePresetId(undefined);
-      let updated = newDate;
-      if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
-        updated = normalizeDateWithTimezone(
-          updated,
-          effectiveTimeZone,
-          effectiveOffsetMinutes
-        );
+    } else {
+      if (isOpenRef.current) {
+        closeNativePicker();
       }
-      const clamped = clampDate(updated, effectiveMinDate, effectiveMaxDate);
-      const finalDate = clamped
-        ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
-        : updated;
-      setCurrentDate(finalDate);
-      dateRef.current = finalDate;
-      onChange?.(finalDate);
-    },
-    [
-      effectiveTimeZone,
-      effectiveOffsetMinutes,
-      effectiveMinDate,
-      effectiveMaxDate,
-      onChange,
-    ]
-  );
-
-  const handleJsConfirm = useCallback(() => {
-    let finalDate = new Date(currentDate.getTime());
-    if (effectiveTimeZone || effectiveOffsetMinutes !== undefined) {
-      finalDate = normalizeDateWithTimezone(
-        finalDate,
-        effectiveTimeZone,
-        effectiveOffsetMinutes
-      );
     }
-    const clamped = clampDate(finalDate, effectiveMinDate, effectiveMaxDate);
-    const confirmedDate = clamped
-      ? clampTime(clamped, effectiveMinDate, effectiveMaxDate)
-      : finalDate;
-
-    setIsJsModalVisible(false);
-    isOpenRef.current = false;
-    onChange?.(confirmedDate);
-    onConfirm?.(confirmedDate);
   }, [
-    currentDate,
-    effectiveTimeZone,
-    effectiveOffsetMinutes,
-    effectiveMinDate,
-    effectiveMaxDate,
-    onChange,
-    onConfirm,
+    effectiveVisible,
+    isControlledVisible,
+    openNativePicker,
+    closeNativePicker,
   ]);
 
-  const handleJsCancel = useCallback(() => {
-    setIsJsModalVisible(false);
-    isOpenRef.current = false;
-    onCancel?.();
-  }, [onCancel]);
-
-  // If native, don't render JS UI (TurboModule handles presentation)
-  if (presentation === 'native') {
-    return null;
-  }
-
-  const defaultHeaderTitle =
-    title ||
-    (mode === 'time'
-      ? localeData.selectTimeTitle
-      : mode === 'datetime'
-        ? localeData.selectDateTimeTitle
-        : localeData.selectDateTitle);
-
-  const isModalVisible = isJsModalVisible;
-
-  // Render JS UI based on mode
-  const renderPickerBody = () => {
-    if (mode === 'time') {
-      return (
-        <ClockPicker
-          value={currentDate}
-          is24Hour={is24Hour}
-          minuteInterval={minuteInterval}
-          locale={localeData}
-          theme={resolvedTheme}
-          onChange={(res) => handleJsDateChange(res.date)}
-        />
-      );
-    }
-
-    if (mode === 'countdown') {
-      const minutesItems = Array.from({ length: 60 }, (_, i) => ({
-        label: `${i} min`,
-        value: i,
-      }));
-      return (
-        <View style={styles.countdownContainer}>
-          <WheelPicker
-            items={minutesItems}
-            selectedValue={currentDate.getMinutes()}
-            theme={resolvedTheme}
-            onChange={(val) => {
-              const d = new Date(currentDate);
-              d.setMinutes(val);
-              handleJsDateChange(d);
-            }}
-          />
-        </View>
-      );
-    }
-
-    if (mode === 'datetime') {
-      return (
-        <View>
-          {/* Tab selector between Date and Time */}
-          <View
-            style={[
-              styles.tabsRow,
-              {
-                borderColor: resolvedTheme.colors.border,
-                backgroundColor: resolvedTheme.colors.card,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              onPress={() => setDateTimeTab('date')}
-              style={[
-                styles.tabBtn,
-                dateTimeTab === 'date' && {
-                  backgroundColor: resolvedTheme.colors.primary,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  {
-                    color:
-                      dateTimeTab === 'date'
-                        ? resolvedTheme.colors.primaryText
-                        : resolvedTheme.colors.textSecondary,
-                    fontWeight: dateTimeTab === 'date' ? 'bold' : 'normal',
-                  },
-                ]}
-              >
-                Date
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setDateTimeTab('time')}
-              style={[
-                styles.tabBtn,
-                dateTimeTab === 'time' && {
-                  backgroundColor: resolvedTheme.colors.primary,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  {
-                    color:
-                      dateTimeTab === 'time'
-                        ? resolvedTheme.colors.primaryText
-                        : resolvedTheme.colors.textSecondary,
-                    fontWeight: dateTimeTab === 'time' ? 'bold' : 'normal',
-                  },
-                ]}
-              >
-                Time
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {dateTimeTab === 'date' ? (
-            <CalendarPicker
-              value={currentDate}
-              onChange={handleJsDateChange}
-              minimumDate={effectiveMinDate}
-              maximumDate={effectiveMaxDate}
-              disabledDates={disabledDates}
-              disabledWeekdays={disabledWeekdays}
-              markedDates={markedDates}
-              firstDayOfWeek={firstDayOfWeek}
-              locale={localeData}
-              theme={resolvedTheme}
-            />
-          ) : (
-            <ClockPicker
-              value={currentDate}
-              is24Hour={is24Hour}
-              minuteInterval={minuteInterval}
-              locale={localeData}
-              theme={resolvedTheme}
-              onChange={(res) => {
-                const combined = new Date(currentDate);
-                combined.setHours(res.hour, res.minute);
-                handleJsDateChange(combined);
-              }}
-            />
-          )}
-        </View>
-      );
-    }
-
-    // Default mode === 'date'
-    return (
-      <CalendarPicker
-        value={currentDate}
-        onChange={handleJsDateChange}
-        minimumDate={effectiveMinDate}
-        maximumDate={effectiveMaxDate}
-        disabledDates={disabledDates}
-        disabledWeekdays={disabledWeekdays}
-        markedDates={markedDates}
-        firstDayOfWeek={firstDayOfWeek}
-        locale={localeData}
-        theme={resolvedTheme}
-      />
-    );
-  };
-
-  const content = (
-    <View style={styles.innerContent}>
-      {presentation !== 'inline' && (
-        <PickerHeader
-          title={defaultHeaderTitle}
-          cancelText={cancelText || localeData.cancelText}
-          confirmText={confirmText || localeData.confirmText}
-          onCancel={handleJsCancel}
-          onConfirm={handleJsConfirm}
-          theme={resolvedTheme}
-          isRTL={localeData.isRTL}
-        />
-      )}
-
-      {showPresets && presets.length > 0 && (
-        <PresetsBar
-          presets={presets}
-          activePresetId={activePresetId}
-          onSelectPreset={handleSelectPreset}
-          theme={resolvedTheme}
-          isRTL={localeData.isRTL}
-        />
-      )}
-
-      {renderPickerBody()}
-    </View>
-  );
-
   return (
-    <ModalWrapper
+    <View
       testID={testID}
-      presentation={presentation}
-      visible={isModalVisible}
-      onClose={handleJsCancel}
-      theme={resolvedTheme}
-      backdropOpacity={backdropOpacity}
-      animationType={animationType}
-      showHandle={showHandle}
-      closeOnBackdropPress={closeOnBackdropPress}
-    >
-      {content}
-    </ModalWrapper>
+      accessible={accessible}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityRole={accessibilityRole}
+      style={styles.hiddenContainer}
+      pointerEvents="none"
+    />
   );
 });
 
 DateTimePicker.displayName = 'DateTimePicker';
 
-/**
- * Imperative helper function to open the native Date Time Picker modal.
- */
 export async function openDateTimePickerModal(
   options: OpenPickerOptions
 ): Promise<Date | null> {
   const {
     mode = 'date',
-    value = new Date(),
+    value,
+    date,
     minimumDate,
     maximumDate,
-    display = 'default',
+    minuteInterval,
     locale,
     timeZoneOffsetInMinutes,
+    timeZone,
     is24Hour,
-    minuteInterval,
+    theme = 'auto',
+    isDarkModeEnabled,
     title,
     confirmText,
+    confirmTextIOS,
     cancelText,
-    theme = 'auto',
+    cancelTextIOS,
     accentColor,
+    accentColorIOS,
+    buttonTextColor,
+    buttonTextColorIOS,
     textColor,
     backgroundColor,
-    disabledDates,
-    disabledWeekdays,
+    display = 'default',
     onChange,
     onConfirm,
     onCancel,
+    onHide,
     onDismiss,
     onError,
   } = options;
 
-  if (minuteInterval !== undefined && !validateMinuteInterval(minuteInterval)) {
-    const err = new DateTimePickerError(
-      'INVALID_MINUTE_INTERVAL',
-      `minuteInterval must be a positive integer dividing 60. Received: ${minuteInterval}`
-    );
-    onError?.(err);
-    throw err;
-  }
-
-  if (
-    minimumDate &&
-    maximumDate &&
-    !validateDateRange(minimumDate, maximumDate)
-  ) {
-    const err = new DateTimePickerError(
-      'DATE_OUT_OF_RANGE',
-      'minimumDate cannot be after maximumDate.'
-    );
-    onError?.(err);
-    throw err;
-  }
-
-  const parsedValue = parseDate(value) || new Date();
-  const minTimestamp = minimumDate ? dateToTimestamp(minimumDate) : undefined;
-  const maxTimestamp = maximumDate ? dateToTimestamp(maximumDate) : undefined;
-
-  const nativeTheme: NativePickerTheme =
-    typeof theme === 'string' &&
-    (theme === 'light' || theme === 'dark' || theme === 'auto')
-      ? theme
-      : 'auto';
-
-  const nativeOptions: NativePickerOptions = {
-    value: parsedValue.getTime(),
-    minimumDate: minTimestamp ?? undefined,
-    maximumDate: maxTimestamp ?? undefined,
-    display,
-    locale: typeof locale === 'string' ? locale : locale?.code,
-    timeZoneOffsetInMinutes,
-    is24Hour,
-    minuteInterval,
-    title,
-    confirmText,
-    cancelText,
-    theme: nativeTheme,
-    accentColor,
-    textColor,
-    backgroundColor,
-  };
-
   try {
-    let result: { action: NativePickerAction; timestamp: number };
-
-    switch (mode) {
-      case 'time':
-        result = await NativeDateTimePicker.openTimePicker(nativeOptions);
-        break;
-      case 'datetime':
-        result = await NativeDateTimePicker.openDateTimePicker(nativeOptions);
-        break;
-      case 'countdown':
-        result = await NativeDateTimePicker.openCountdownPicker(nativeOptions);
-        break;
-      case 'date':
-      default:
-        result = await NativeDateTimePicker.openDatePicker(nativeOptions);
-        break;
+    if (
+      minimumDate &&
+      maximumDate &&
+      !validateDateRange(minimumDate, maximumDate)
+    ) {
+      throw new DateTimePickerError(
+        'DATE_OUT_OF_RANGE',
+        'minimumDate cannot be later than maximumDate.'
+      );
+    }
+    if (
+      minuteInterval !== undefined &&
+      !validateMinuteInterval(minuteInterval)
+    ) {
+      throw new DateTimePickerError(
+        'INVALID_MINUTE_INTERVAL',
+        `Minute interval ${minuteInterval} is invalid. Must be one of 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30.`
+      );
     }
 
-    const selectedDate = timestampToDate(result.timestamp);
-    if (result.action === 'confirmed') {
-      if (isDateDisabled(selectedDate, disabledDates, disabledWeekdays)) {
-        const err = new DateTimePickerError(
-          'DATE_OUT_OF_RANGE',
-          'Selected date is disabled.'
-        );
-        onError?.(err);
+    const targetDate = parseDate(date ?? value) ?? new Date();
+    const ts = dateToTimestamp(targetDate) ?? Date.now();
+    const rawMinTs = minimumDate ? dateToTimestamp(minimumDate) : undefined;
+    const rawMaxTs = maximumDate ? dateToTimestamp(maximumDate) : undefined;
+    const minTs = rawMinTs ?? undefined;
+    const maxTs = rawMaxTs ?? undefined;
+
+    let resolvedTheme: NativePickerTheme = 'auto';
+    if (isDarkModeEnabled !== undefined) {
+      resolvedTheme = isDarkModeEnabled ? 'dark' : 'light';
+    } else if (typeof theme === 'string') {
+      resolvedTheme = theme as NativePickerTheme;
+    }
+
+    const localeStr =
+      typeof locale === 'string'
+        ? locale
+        : locale && typeof locale === 'object' && 'languageTag' in locale
+          ? (locale as any).languageTag
+          : undefined;
+
+    const nativeOpts: NativePickerOptions = {
+      value: ts,
+      mode: mode === 'datetime' ? 'datetime' : mode,
+      display,
+      minimumDate: minTs,
+      maximumDate: maxTs,
+      minuteInterval,
+      locale: localeStr,
+      timeZoneOffsetInMinutes,
+      timeZone,
+      is24Hour,
+      theme: resolvedTheme,
+      isDarkModeEnabled: isDarkModeEnabled ?? resolvedTheme === 'dark',
+      title,
+      confirmText: confirmText ?? confirmTextIOS,
+      confirmTextIOS: confirmTextIOS ?? confirmText,
+      cancelText: cancelText ?? cancelTextIOS,
+      cancelTextIOS: cancelTextIOS ?? cancelText,
+      accentColor: accentColor ?? accentColorIOS,
+      accentColorIOS: accentColorIOS ?? accentColor,
+      buttonTextColor: buttonTextColor ?? buttonTextColorIOS,
+      buttonTextColorIOS: buttonTextColorIOS ?? buttonTextColor,
+      textColor,
+      backgroundColor,
+    };
+
+    let result: { action: NativePickerAction; timestamp?: number };
+
+    if (mode === 'date') {
+      result = await NativeDateTimePicker.openDatePicker(nativeOpts);
+    } else if (mode === 'time') {
+      result = await NativeDateTimePicker.openTimePicker(nativeOpts);
+    } else if (mode === 'datetime') {
+      result = await NativeDateTimePicker.openDateTimePicker(nativeOpts);
+    } else if (mode === 'countdown') {
+      result = await NativeDateTimePicker.openCountdownPicker(nativeOpts);
+    } else {
+      result = await NativeDateTimePicker.openDatePicker(nativeOpts);
+    }
+
+    if (result.action === 'confirmed' && result.timestamp != null) {
+      let confirmedDate = timestampToDate(result.timestamp);
+      if (timeZone) {
+        confirmedDate = normalizeDateWithTimezone(confirmedDate, timeZone);
       }
-      onChange?.(selectedDate);
-      onConfirm?.(selectedDate);
-      return selectedDate;
+      const finalDate =
+        clampDate(confirmedDate, minimumDate, maximumDate) ?? confirmedDate;
+      onChange?.(finalDate);
+      onConfirm?.(finalDate);
+      onHide?.(true, finalDate);
+      return finalDate;
     } else if (result.action === 'cancelled') {
       onCancel?.();
+      onHide?.(false, undefined);
       return null;
     } else {
       onDismiss?.();
+      onHide?.(false, undefined);
       return null;
     }
-  } catch (error) {
-    const normalized =
-      error instanceof DateTimePickerError
-        ? error
+  } catch (err: any) {
+    const errorObj =
+      err instanceof DateTimePickerError
+        ? err
         : new DateTimePickerError(
-            'UNKNOWN_ERROR',
-            error instanceof Error ? error.message : 'Unknown error',
-            error
+            'PRESENTATION_FAILED',
+            err?.message || 'Failed to display picker'
           );
-    onError?.(normalized);
-    throw normalized;
+    onError?.(errorObj);
+    onHide?.(false, undefined);
+    throw errorObj;
   }
 }
 
 const styles = StyleSheet.create({
-  innerContent: {
-    width: '100%',
-  },
-  countdownContainer: {
-    padding: 16,
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabText: {
-    fontSize: 14,
+  hiddenContainer: {
+    width: 0,
+    height: 0,
+    opacity: 0,
+    position: 'absolute',
   },
 });

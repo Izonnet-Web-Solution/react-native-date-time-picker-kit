@@ -2,6 +2,7 @@ package com.datetimepickerkit
 
 import android.app.DatePickerDialog
 import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.widget.DatePicker
 import com.facebook.react.bridge.Arguments
@@ -52,45 +53,70 @@ class DatePickerHelper(
       "default"
     }
 
-    // Determine theme based on display or theme options
-    val themeId = when (display) {
-      "spinner" -> android.R.style.Theme_DeviceDefault_Dialog_Alert
+    // Determine theme based on isDarkModeEnabled, theme, or display options
+    val isDark = (options.hasKey("isDarkModeEnabled") && options.getBoolean("isDarkModeEnabled")) ||
+      (options.hasKey("theme") && options.getString("theme") == "dark")
+
+    val themeId = when {
+      isDark -> android.R.style.Theme_DeviceDefault_Dialog_Alert
+      display == "spinner" -> android.R.style.Theme_DeviceDefault_Light_Dialog_Alert
       else -> 0 // default dialog theme
     }
 
-    val dialog = if (themeId != 0) {
-      DatePickerDialog(context, themeId, { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
-        if (!isHandled) {
-          isHandled = true
-          calendar.set(Calendar.YEAR, selectedYear)
-          calendar.set(Calendar.MONTH, selectedMonth)
-          calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
-          resolveSuccess("confirmed", calendar.timeInMillis)
+    // Locale configuration support
+    val dialogContext = if (options.hasKey("locale") && !options.isNull("locale")) {
+      val localeStr = options.getString("locale")
+      if (!localeStr.isNullOrEmpty()) {
+        try {
+          val loc = Locale.forLanguageTag(localeStr.replace('_', '-'))
+          val config = Configuration(context.resources.configuration)
+          config.setLocale(loc)
+          context.createConfigurationContext(config)
+        } catch (_: Exception) {
+          context
         }
-      }, year, month, day)
+      } else {
+        context
+      }
     } else {
-      DatePickerDialog(context, { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
-        if (!isHandled) {
-          isHandled = true
-          calendar.set(Calendar.YEAR, selectedYear)
-          calendar.set(Calendar.MONTH, selectedMonth)
-          calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
-          resolveSuccess("confirmed", calendar.timeInMillis)
-        }
-      }, year, month, day)
+      context
+    }
+
+    val dateSetListener = { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
+      if (!isHandled) {
+        isHandled = true
+        calendar.set(Calendar.YEAR, selectedYear)
+        calendar.set(Calendar.MONTH, selectedMonth)
+        calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
+        resolveSuccess("confirmed", calendar.timeInMillis)
+      }
+    }
+
+    val dialog = if (themeId != 0) {
+      DatePickerDialog(dialogContext, themeId, dateSetListener, year, month, day)
+    } else {
+      DatePickerDialog(dialogContext, dateSetListener, year, month, day)
     }
 
     val datePicker = dialog.datePicker
 
-    // Minimum date
-    if (options.hasKey("minimumDate") && !options.isNull("minimumDate")) {
-      val minDate = options.getDouble("minimumDate").toLong()
-      datePicker.minDate = minDate
-    }
+    // Minimum and Maximum date with boundary safety
+    val minDate = if (options.hasKey("minimumDate") && !options.isNull("minimumDate")) {
+      options.getDouble("minimumDate").toLong()
+    } else null
 
-    // Maximum date
-    if (options.hasKey("maximumDate") && !options.isNull("maximumDate")) {
-      val maxDate = options.getDouble("maximumDate").toLong()
+    val maxDate = if (options.hasKey("maximumDate") && !options.isNull("maximumDate")) {
+      options.getDouble("maximumDate").toLong()
+    } else null
+
+    if (minDate != null && maxDate != null) {
+      if (minDate <= maxDate) {
+        datePicker.minDate = minDate
+        datePicker.maxDate = maxDate
+      }
+    } else if (minDate != null) {
+      datePicker.minDate = minDate
+    } else if (maxDate != null) {
       datePicker.maxDate = maxDate
     }
 
@@ -102,19 +128,23 @@ class DatePickerHelper(
       }
     }
 
-    // Custom button labels
-    if (options.hasKey("confirmText") && !options.isNull("confirmText")) {
-      val confirmText = options.getString("confirmText")
-      if (!confirmText.isNullOrEmpty()) {
-        dialog.setButton(DatePickerDialog.BUTTON_POSITIVE, confirmText, dialog)
-      }
+    // Custom button labels (with iOS alias fallback)
+    val confirmText = when {
+      options.hasKey("confirmText") && !options.isNull("confirmText") -> options.getString("confirmText")
+      options.hasKey("confirmTextIOS") && !options.isNull("confirmTextIOS") -> options.getString("confirmTextIOS")
+      else -> null
+    }
+    if (!confirmText.isNullOrEmpty()) {
+      dialog.setButton(DatePickerDialog.BUTTON_POSITIVE, confirmText, dialog)
     }
 
-    if (options.hasKey("cancelText") && !options.isNull("cancelText")) {
-      val cancelText = options.getString("cancelText")
-      if (!cancelText.isNullOrEmpty()) {
-        dialog.setButton(DatePickerDialog.BUTTON_NEGATIVE, cancelText, dialog)
-      }
+    val cancelText = when {
+      options.hasKey("cancelText") && !options.isNull("cancelText") -> options.getString("cancelText")
+      options.hasKey("cancelTextIOS") && !options.isNull("cancelTextIOS") -> options.getString("cancelTextIOS")
+      else -> null
+    }
+    if (!cancelText.isNullOrEmpty()) {
+      dialog.setButton(DatePickerDialog.BUTTON_NEGATIVE, cancelText, dialog)
     }
 
     dialog.setOnCancelListener {

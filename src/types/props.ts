@@ -1,3 +1,4 @@
+import type React from 'react';
 import type {
   NativePickerAction,
   NativePickerDisplay,
@@ -10,24 +11,45 @@ import type {
   DateTimePickerConfirmEvent,
   DateTimePickerDismissEvent,
   DateTimePickerErrorEvent,
+  DateTimePickerHideEvent,
   DateTimePickerOpenEvent,
 } from './events';
-import type {
-  ThemeColorsOverride,
-  ThemeConfig,
-  ThemeMode,
-} from '../theme/types';
-import type { PartialLocaleData } from '../localization/types';
 import type { BaseModalProps, PresentationMode } from './presentation';
-import type { MarkedDatesMap } from '../components/CalendarPicker';
-import type { DatePreset } from '../presets';
 
 export type MinuteInterval = 1 | 2 | 3 | 4 | 5 | 6 | 10 | 12 | 15 | 20 | 30;
 
 export type PickerMode = NativePickerMode;
-export type PickerTheme = NativePickerTheme | ThemeMode;
+export type PickerTheme = NativePickerTheme | 'light' | 'dark' | 'auto';
 export type PickerDisplay = NativePickerDisplay;
 export type PickerPresentation = PresentationMode;
+export type PickerAction = NativePickerAction;
+
+export type ThemeMode = 'light' | 'dark' | 'auto';
+
+export interface ThemeColorsOverride {
+  primary?: string;
+  background?: string;
+  text?: string;
+  card?: string;
+  border?: string;
+  subtext?: string;
+  [key: string]: string | undefined;
+}
+
+export interface ThemeConfig {
+  mode?: ThemeMode;
+  colors?: ThemeColorsOverride;
+  [key: string]: any;
+}
+
+export type PartialLocaleData = Record<string, any>;
+export type MarkedDatesMap = Record<string, any>;
+
+export interface DatePreset {
+  id: string;
+  label: string;
+  getValue: () => Date | { startDate: Date; endDate: Date };
+}
 
 export interface TimeObject {
   hour: number;
@@ -40,15 +62,22 @@ export interface DateTimePickerProps extends Omit<
   'onConfirm' | 'onCancel'
 > {
   /**
-   * Selection mode for picker: 'date', 'time', 'datetime', or 'countdown'.
+   * Selection mode for picker: 'date', 'time', 'datetime', or 'countdown' (iOS only).
    * @default 'date'
    */
   mode?: NativePickerMode;
 
   /**
    * Controlled Date value. Accepts Date object, numeric epoch timestamp, or ISO string.
+   * Compatible with `react-native-modal-datetime-picker` and standard React inputs.
    */
   value?: Date | number | string | null;
+
+  /**
+   * Alias for `value`. Used extensively in `react-native-modal-datetime-picker`.
+   * Accepts Date object, numeric epoch timestamp, or ISO string.
+   */
+  date?: Date | number | string | null;
 
   /**
    * Uncontrolled initial Date value.
@@ -56,7 +85,9 @@ export interface DateTimePickerProps extends Omit<
   defaultValue?: Date | number | string | null;
 
   /**
-   * Native display presentation style on iOS/Android (e.g. 'compact', 'inline', 'spinner', 'clock').
+   * Native display presentation style on iOS/Android.
+   * iOS: 'default' | 'spinner' | 'compact' | 'inline'
+   * Android: 'default' | 'spinner' | 'calendar' | 'clock'
    * @default 'default'
    */
   display?: NativePickerDisplay;
@@ -68,13 +99,18 @@ export interface DateTimePickerProps extends Omit<
   disabled?: boolean;
 
   /**
-   * Presentation mode: 'native' (OS dialog), 'inline', 'modal', 'bottom-sheet', or 'fullscreen'.
+   * Presentation mode:
+   * - 'native': OS native modal dialog (TurboModule, highest performance)
+   * - 'inline': Inline embedded view
+   * - 'modal': React Native JS centered modal
+   * - 'bottom-sheet': Sliding bottom-sheet modal
+   * - 'fullscreen': Fullscreen view presentation
    * @default 'native'
    */
   presentation?: PresentationMode;
 
   /**
-   * Minimum selectable date/time boundary. Selection before this timestamp is prevented/clamped.
+   * Minimum selectable date/time boundary. Selection before this timestamp is clamped.
    */
   minimumDate?: Date | number | string;
 
@@ -84,7 +120,7 @@ export interface DateTimePickerProps extends Omit<
   minDate?: Date | number | string;
 
   /**
-   * Maximum selectable date/time boundary. Selection after this timestamp is prevented/clamped.
+   * Maximum selectable date/time boundary. Selection after this timestamp is clamped.
    */
   maximumDate?: Date | number | string;
 
@@ -120,18 +156,18 @@ export interface DateTimePickerProps extends Omit<
   disabledWeekdays?: number[];
 
   /**
-   * Map of marked dates with colored dots, badges, or custom highlights.
+   * Map of marked dates.
    */
   markedDates?: MarkedDatesMap;
 
   /**
-   * Locale string identifier (e.g. 'en', 'hi', 'gu', 'ar', 'es') or custom LocaleData object.
+   * Locale string identifier (e.g. 'en', 'en_US', 'hi', 'gu', 'es_ES', 'fr_FR').
    * @default Device locale
    */
   locale?: string | PartialLocaleData;
 
   /**
-   * Target IANA timezone identifier (e.g. 'America/New_York', 'Asia/Kolkata').
+   * Target IANA timezone identifier (e.g. 'America/New_York', 'Asia/Kolkata', 'UTC').
    */
   timeZone?: string;
 
@@ -141,7 +177,7 @@ export interface DateTimePickerProps extends Omit<
   timeZoneName?: string;
 
   /**
-   * Explicit UTC offset in minutes (e.g. 330 for IST +05:30).
+   * Explicit UTC offset in minutes (e.g. 330 for IST +05:30, -300 for EST).
    */
   timeZoneOffsetInMinutes?: number;
 
@@ -151,7 +187,7 @@ export interface DateTimePickerProps extends Omit<
   utcOffset?: number;
 
   /**
-   * Explicit override for 24-hour time representation.
+   * Explicit override for 24-hour time representation (Android).
    */
   is24Hour?: boolean;
 
@@ -161,10 +197,16 @@ export interface DateTimePickerProps extends Omit<
   firstDayOfWeek?: number;
 
   /**
-   * Visual theme mode ('light', 'dark', 'auto') or comprehensive ThemeConfig object.
+   * Visual theme mode ('light', 'dark', 'auto') or ThemeConfig object.
    * @default 'auto'
    */
   theme?: NativePickerTheme | ThemeMode | ThemeConfig;
+
+  /**
+   * Whether dark mode should be explicitly enabled.
+   * Directly compatible with `react-native-modal-datetime-picker`.
+   */
+  isDarkModeEnabled?: boolean;
 
   /**
    * Convenient color override palette for quick styling without breaking layouts.
@@ -188,18 +230,47 @@ export interface DateTimePickerProps extends Omit<
 
   /**
    * Confirm button action label.
+   * @default 'Confirm'
    */
   confirmText?: string;
 
   /**
+   * iOS alias for `confirmText`, matching `react-native-modal-datetime-picker`.
+   * @default 'Confirm'
+   */
+  confirmTextIOS?: string;
+
+  /**
    * Cancel button action label.
+   * @default 'Cancel'
    */
   cancelText?: string;
 
   /**
-   * Accent color override.
+   * iOS alias for `cancelText`, matching `react-native-modal-datetime-picker`.
+   * @default 'Cancel'
+   */
+  cancelTextIOS?: string;
+
+  /**
+   * Accent color override (hex color string or color name).
    */
   accentColor?: string;
+
+  /**
+   * iOS alias for `accentColor`, matching `react-native-modal-datetime-picker`.
+   */
+  accentColorIOS?: string;
+
+  /**
+   * Button text color override for modal actions.
+   */
+  buttonTextColor?: string;
+
+  /**
+   * iOS alias for `buttonTextColor`, matching `react-native-modal-datetime-picker`.
+   */
+  buttonTextColorIOS?: string;
 
   /**
    * Text color override.
@@ -207,12 +278,70 @@ export interface DateTimePickerProps extends Omit<
   textColor?: string;
 
   /**
-   * Background color override.
+   * Background color override for modal or container.
    */
   backgroundColor?: string;
 
   /**
-   * Whether to show quick date presets bar (Today, Yesterday, Last 7 Days, This Month).
+   * Custom React component or node for iOS confirm button.
+   * Matches `react-native-modal-datetime-picker`.
+   */
+  customConfirmButtonIOS?: React.ComponentType<any> | React.ReactNode;
+
+  /**
+   * Custom React component or node for iOS cancel button.
+   * Matches `react-native-modal-datetime-picker`.
+   */
+  customCancelButtonIOS?: React.ComponentType<any> | React.ReactNode;
+
+  /**
+   * Custom React component or node for iOS header.
+   * Matches `react-native-modal-datetime-picker`.
+   */
+  customHeaderIOS?: React.ComponentType<any> | React.ReactNode;
+
+  /**
+   * Additional props passed to the underlying modal on iOS.
+   */
+  modalPropsIOS?: Record<string, any>;
+
+  /**
+   * Custom style for the picker container view on iOS.
+   */
+  pickerContainerStyleIOS?: any;
+
+  /**
+   * Custom style for the picker component on iOS.
+   */
+  pickerComponentStyleIOS?: any;
+
+  /**
+   * Custom style for the backdrop overlay on iOS.
+   */
+  backdropStyleIOS?: any;
+
+  /**
+   * Accessibility: Whether this element is an accessibility element.
+   */
+  accessible?: boolean;
+
+  /**
+   * Accessibility label read aloud by VoiceOver / TalkBack.
+   */
+  accessibilityLabel?: string;
+
+  /**
+   * Accessibility hint explaining the outcome of interaction.
+   */
+  accessibilityHint?: string;
+
+  /**
+   * Accessibility role.
+   */
+  accessibilityRole?: any;
+
+  /**
+   * Whether to show quick date presets bar.
    * @default false
    */
   showPresets?: boolean;
@@ -236,6 +365,13 @@ export interface DateTimePickerProps extends Omit<
    * Callback fired when picker is cancelled or closed without confirmation.
    */
   onCancel?: DateTimePickerCancelEvent;
+
+  /**
+   * Callback fired when the picker dialog or modal is completely hidden/dismissed.
+   * Receives `isConfirmed` boolean and the confirmed `date` (if confirmed).
+   * Directly matches `react-native-modal-datetime-picker`.
+   */
+  onHide?: DateTimePickerHideEvent;
 
   /**
    * Callback fired on native dialog dismissal.
@@ -263,10 +399,49 @@ export interface DateTimePickerProps extends Omit<
   open?: boolean;
 
   /**
-   * Alias for `open` or `visible`.
+   * Declarative visibility control flag.
+   * Matches `react-native-modal-datetime-picker`.
    */
   isVisible?: boolean;
 }
+
+/**
+ * Props for `DateTimePickerModal`, providing 100% functional and TypeScript
+ * compatibility with `react-native-modal-datetime-picker`.
+ */
+export interface DateTimePickerModalProps extends DateTimePickerProps {
+  /**
+   * Controls the visibility of the modal dialog.
+   * @default false
+   */
+  isVisible?: boolean;
+
+  /**
+   * The currently selected or initial date.
+   * Accepts a `Date` object, numeric epoch timestamp, or ISO string.
+   */
+  date?: Date | number | string | null;
+
+  /**
+   * Callback fired when the user confirms their selection.
+   * Receives the selected `Date` object.
+   */
+  onConfirm?: DateTimePickerConfirmEvent;
+
+  /**
+   * Callback fired when the user cancels or dismisses the picker without confirming.
+   */
+  onCancel?: DateTimePickerCancelEvent;
+
+  /**
+   * Callback fired after the modal has been dismissed/hidden.
+   * @param isConfirmed Whether the dialog closed via confirmation.
+   * @param date The confirmed Date, or undefined if cancelled.
+   */
+  onHide?: DateTimePickerHideEvent;
+}
+
+export type ModalDateTimePickerProps = DateTimePickerModalProps;
 
 export interface DateTimePickerRef {
   open: () => Promise<Date | null>;

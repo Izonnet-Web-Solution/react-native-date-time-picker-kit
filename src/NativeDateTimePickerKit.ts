@@ -16,4 +16,4 @@ export interface Spec extends TurboModule {
   resetPicker(): Promise<boolean>;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>('DateTimePickerKit');
+export default TurboModuleRegistry.get<Spec>('DateTimePickerKit');

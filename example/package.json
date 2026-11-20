@@ -12,7 +12,7 @@
     "build:web": "vite build"
   },
   "dependencies": {
-    "@izonnet-web-solution/react-native-date-time-picker-kit": "workspace:*",
+    "@izonnet-web-solution/react-native-date-time-modal": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.0",

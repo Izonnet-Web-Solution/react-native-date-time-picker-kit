@@ -8,6 +8,7 @@ public class DateTimePickerKitImpl: NSObject {
 
   private var isPickerOpen: Bool = false
   private var activeViewController: UIViewController?
+  private var activeContainerView: UIView?
   private var activePicker: UIDatePicker?
   private var storedTimestamp: Double = Date().timeIntervalSince1970 * 1000
   private var activeResolve: ((Any?) -> Void)?
@@ -209,7 +210,7 @@ public class DateTimePickerKitImpl: NSObject {
       picker.date = initialDate
       picker.translatesAutoresizingMaskIntoConstraints = false
 
-      // Display style
+      // Display style - default to wheels (spinner) to match react-native-modal-datetime-picker ActionSheet UI
       let display = options["display"] as? String ?? "default"
       switch display {
       case "spinner":
@@ -219,13 +220,7 @@ public class DateTimePickerKitImpl: NSObject {
       case "inline":
         picker.preferredDatePickerStyle = .inline
       default:
-        if mode == .dateAndTime {
-          picker.preferredDatePickerStyle = .compact
-        } else if mode == .date {
-          picker.preferredDatePickerStyle = .inline
-        } else {
-          picker.preferredDatePickerStyle = .wheels
-        }
+        picker.preferredDatePickerStyle = .wheels
       }
 
       // Minimum Date
@@ -257,12 +252,14 @@ public class DateTimePickerKitImpl: NSObject {
         }
       }
 
-      // Theme
+      // Theme & Dark Mode
       let modalVC = UIViewController()
       modalVC.modalPresentationStyle = .overFullScreen
       modalVC.modalTransitionStyle = .crossDissolve
 
-      if let theme = options["theme"] as? String {
+      if let isDark = options["isDarkModeEnabled"] as? Bool {
+        modalVC.overrideUserInterfaceStyle = isDark ? .dark : .light
+      } else if let theme = options["theme"] as? String {
         switch theme {
         case "dark":
           modalVC.overrideUserInterfaceStyle = .dark
@@ -274,104 +271,212 @@ public class DateTimePickerKitImpl: NSObject {
       }
 
       // Accent color
-      if let accentHex = options["accentColor"] as? String, let color = self.colorFromHex(accentHex) {
+      let accentHex = options["accentColorIOS"] as? String ?? options["accentColor"] as? String
+      if let accHex = accentHex, let color = self.colorFromHex(accHex) {
         picker.tintColor = color
       }
 
+      // Accessibility
+      if let accLabel = options["accessibilityLabel"] as? String {
+        picker.accessibilityLabel = accLabel
+      }
+      if let accHint = options["accessibilityHint"] as? String {
+        picker.accessibilityHint = accHint
+      }
+
+      picker.addTarget(self, action: #selector(self.handlePickerDateChanged(_:)), for: .valueChanged)
       self.activePicker = picker
 
-      // Container View
+      // Overlay Backdrop View (dimmed background)
       let overlayView = UIView()
       overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.4)
       overlayView.translatesAutoresizingMaskIntoConstraints = false
 
-      let sheetView = UIView()
-      sheetView.backgroundColor = UIColor { trait in
-        trait.userInterfaceStyle == .dark ? UIColor(white: 0.15, alpha: 1.0) : UIColor.white
-      }
-      sheetView.layer.cornerRadius = 16
-      sheetView.layer.masksToBounds = true
-      sheetView.translatesAutoresizingMaskIntoConstraints = false
-      sheetView.accessibilityViewIsModal = true
-
-      // Header Bar
-      let headerView = UIView()
-      headerView.translatesAutoresizingMaskIntoConstraints = false
-
-      let cancelBtn = UIButton(type: .system)
-      let cancelText = options["cancelText"] as? String ?? "Cancel"
-      cancelBtn.setTitle(cancelText, for: .normal)
-      cancelBtn.accessibilityLabel = cancelText
-      cancelBtn.accessibilityTraits = .button
-      cancelBtn.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
-      cancelBtn.translatesAutoresizingMaskIntoConstraints = false
-      cancelBtn.addTarget(self, action: #selector(self.handleCancelTap), for: .touchUpInside)
-
-      let titleLabel = UILabel()
-      let titleText = options["title"] as? String ?? ""
-      titleLabel.text = titleText
-      titleLabel.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-      titleLabel.textAlignment = .center
-      titleLabel.translatesAutoresizingMaskIntoConstraints = false
-
-      let confirmBtn = UIButton(type: .system)
-      let confirmText = options["confirmText"] as? String ?? "Confirm"
-      confirmBtn.setTitle(confirmText, for: .normal)
-      confirmBtn.accessibilityLabel = confirmText
-      confirmBtn.accessibilityTraits = .button
-      confirmBtn.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-      confirmBtn.translatesAutoresizingMaskIntoConstraints = false
-      confirmBtn.addTarget(self, action: #selector(self.handleConfirmTap), for: .touchUpInside)
-
-      headerView.addSubview(cancelBtn)
-      headerView.addSubview(titleLabel)
-      headerView.addSubview(confirmBtn)
-
-      sheetView.addSubview(headerView)
-      sheetView.addSubview(picker)
-
-      modalVC.view.addSubview(overlayView)
-      modalVC.view.addSubview(sheetView)
-
-      // Backdrop tap gesture
       let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.handleBackdropTap))
       overlayView.addGestureRecognizer(tapGesture)
 
-      NSLayoutConstraint.activate([
+      // Container View for both cards
+      let containerView = UIView()
+      containerView.translatesAutoresizingMaskIntoConstraints = false
+      containerView.backgroundColor = .clear
+      self.activeContainerView = containerView
+
+      // Card Background Color
+      let cardBgColor: UIColor
+      if let bgHex = options["backgroundColor"] as? String, let customBg = self.colorFromHex(bgHex) {
+        cardBgColor = customBg
+      } else {
+        cardBgColor = UIColor { trait in
+          trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.17, green: 0.17, blue: 0.18, alpha: 0.98)
+            : UIColor(red: 0.98, green: 0.98, blue: 0.98, alpha: 0.98)
+        }
+      }
+
+      // Top Card (Picker + Separator + Confirm Button)
+      let topCard = UIView()
+      topCard.layer.cornerRadius = 14
+      topCard.layer.masksToBounds = true
+      topCard.backgroundColor = cardBgColor
+      topCard.translatesAutoresizingMaskIntoConstraints = false
+
+      // Hairline Separator
+      let separator = UIView()
+      separator.backgroundColor = UIColor.separator
+      separator.translatesAutoresizingMaskIntoConstraints = false
+
+      // Button Colors
+      let defaultBlue = UIColor(red: 0.0, green: 122.0 / 255.0, blue: 1.0, alpha: 1.0)
+      let btnTextColor = (options["buttonTextColorIOS"] as? String ?? options["buttonTextColor"] as? String).flatMap { self.colorFromHex($0) }
+      let accentCol = (options["accentColorIOS"] as? String ?? options["accentColor"] as? String).flatMap { self.colorFromHex($0) }
+
+      let confirmColor = (options["confirmButtonTextColorIOS"] as? String).flatMap { self.colorFromHex($0) }
+        ?? btnTextColor
+        ?? accentCol
+        ?? defaultBlue
+
+      let cancelColor = (options["cancelButtonTextColorIOS"] as? String).flatMap { self.colorFromHex($0) }
+        ?? btnTextColor
+        ?? accentCol
+        ?? defaultBlue
+
+      // Confirm Button
+      let confirmBtn = UIButton(type: .system)
+      let confirmText = options["confirmTextIOS"] as? String ?? options["confirmText"] as? String ?? "Confirm"
+      confirmBtn.setTitle(confirmText, for: .normal)
+      confirmBtn.accessibilityLabel = confirmText
+      confirmBtn.accessibilityTraits = .button
+      confirmBtn.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .regular)
+      confirmBtn.setTitleColor(confirmColor, for: .normal)
+      confirmBtn.translatesAutoresizingMaskIntoConstraints = false
+      confirmBtn.addTarget(self, action: #selector(self.handleConfirmTap), for: .touchUpInside)
+
+      // Optional Title Label
+      let titleText = options["title"] as? String
+      var titleLabel: UILabel?
+      var titleSeparator: UIView?
+      if let tText = titleText, !tText.isEmpty {
+        let label = UILabel()
+        label.text = tText
+        label.font = UIFont.systemFont(ofSize: 13, weight: .regular)
+        label.textColor = UIColor.secondaryLabel
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        topCard.addSubview(label)
+        titleLabel = label
+
+        let tSep = UIView()
+        tSep.backgroundColor = UIColor.separator
+        tSep.translatesAutoresizingMaskIntoConstraints = false
+        topCard.addSubview(tSep)
+        titleSeparator = tSep
+      }
+
+      topCard.addSubview(picker)
+      topCard.addSubview(separator)
+      topCard.addSubview(confirmBtn)
+
+      // Bottom Card (Cancel Button)
+      let bottomCard = UIView()
+      bottomCard.layer.cornerRadius = 14
+      bottomCard.layer.masksToBounds = true
+      bottomCard.backgroundColor = cardBgColor
+      bottomCard.translatesAutoresizingMaskIntoConstraints = false
+
+      let cancelBtn = UIButton(type: .system)
+      let cancelText = options["cancelTextIOS"] as? String ?? options["cancelText"] as? String ?? "Cancel"
+      cancelBtn.setTitle(cancelText, for: .normal)
+      cancelBtn.accessibilityLabel = cancelText
+      cancelBtn.accessibilityTraits = .button
+      cancelBtn.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
+      cancelBtn.setTitleColor(cancelColor, for: .normal)
+      cancelBtn.translatesAutoresizingMaskIntoConstraints = false
+      cancelBtn.addTarget(self, action: #selector(self.handleCancelTap), for: .touchUpInside)
+
+      bottomCard.addSubview(cancelBtn)
+
+      containerView.addSubview(topCard)
+      containerView.addSubview(bottomCard)
+
+      modalVC.view.addSubview(overlayView)
+      modalVC.view.addSubview(containerView)
+
+      // Layout Constraints
+      var constraints: [NSLayoutConstraint] = [
         overlayView.leadingAnchor.constraint(equalTo: modalVC.view.leadingAnchor),
         overlayView.trailingAnchor.constraint(equalTo: modalVC.view.trailingAnchor),
         overlayView.topAnchor.constraint(equalTo: modalVC.view.topAnchor),
         overlayView.bottomAnchor.constraint(equalTo: modalVC.view.bottomAnchor),
 
-        sheetView.leadingAnchor.constraint(equalTo: modalVC.view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-        sheetView.trailingAnchor.constraint(equalTo: modalVC.view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-        sheetView.bottomAnchor.constraint(equalTo: modalVC.view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+        containerView.leadingAnchor.constraint(equalTo: modalVC.view.safeAreaLayoutGuide.leadingAnchor, constant: 10),
+        containerView.trailingAnchor.constraint(equalTo: modalVC.view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+        containerView.bottomAnchor.constraint(equalTo: modalVC.view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
 
-        headerView.leadingAnchor.constraint(equalTo: sheetView.leadingAnchor, constant: 16),
-        headerView.trailingAnchor.constraint(equalTo: sheetView.trailingAnchor, constant: -16),
-        headerView.topAnchor.constraint(equalTo: sheetView.topAnchor, constant: 12),
-        headerView.heightAnchor.constraint(equalToConstant: 44),
+        topCard.topAnchor.constraint(equalTo: containerView.topAnchor),
+        topCard.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+        topCard.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
 
-        cancelBtn.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
-        cancelBtn.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+        bottomCard.topAnchor.constraint(equalTo: topCard.bottomAnchor, constant: 8),
+        bottomCard.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+        bottomCard.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+        bottomCard.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+        bottomCard.heightAnchor.constraint(equalToConstant: 57),
 
-        titleLabel.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
-        titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-        titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: cancelBtn.trailingAnchor, constant: 8),
-        titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: confirmBtn.leadingAnchor, constant: -8),
+        cancelBtn.topAnchor.constraint(equalTo: bottomCard.topAnchor),
+        cancelBtn.bottomAnchor.constraint(equalTo: bottomCard.bottomAnchor),
+        cancelBtn.leadingAnchor.constraint(equalTo: bottomCard.leadingAnchor),
+        cancelBtn.trailingAnchor.constraint(equalTo: bottomCard.trailingAnchor),
 
-        confirmBtn.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
-        confirmBtn.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+        separator.leadingAnchor.constraint(equalTo: topCard.leadingAnchor),
+        separator.trailingAnchor.constraint(equalTo: topCard.trailingAnchor),
+        separator.heightAnchor.constraint(equalToConstant: 0.5),
 
-        picker.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 12),
-        picker.leadingAnchor.constraint(equalTo: sheetView.leadingAnchor, constant: 16),
-        picker.trailingAnchor.constraint(equalTo: sheetView.trailingAnchor, constant: -16),
-        picker.bottomAnchor.constraint(equalTo: sheetView.bottomAnchor, constant: -16),
+        confirmBtn.topAnchor.constraint(equalTo: separator.bottomAnchor),
+        confirmBtn.leadingAnchor.constraint(equalTo: topCard.leadingAnchor),
+        confirmBtn.trailingAnchor.constraint(equalTo: topCard.trailingAnchor),
+        confirmBtn.heightAnchor.constraint(equalToConstant: 57),
+        confirmBtn.bottomAnchor.constraint(equalTo: topCard.bottomAnchor),
+      ]
+
+      if let tLabel = titleLabel, let tSep = titleSeparator {
+        constraints.append(contentsOf: [
+          tLabel.topAnchor.constraint(equalTo: topCard.topAnchor, constant: 12),
+          tLabel.leadingAnchor.constraint(equalTo: topCard.leadingAnchor, constant: 16),
+          tLabel.trailingAnchor.constraint(equalTo: topCard.trailingAnchor, constant: -16),
+
+          tSep.topAnchor.constraint(equalTo: tLabel.bottomAnchor, constant: 12),
+          tSep.leadingAnchor.constraint(equalTo: topCard.leadingAnchor),
+          tSep.trailingAnchor.constraint(equalTo: topCard.trailingAnchor),
+          tSep.heightAnchor.constraint(equalToConstant: 0.5),
+
+          picker.topAnchor.constraint(equalTo: tSep.bottomAnchor),
+        ])
+      } else {
+        constraints.append(picker.topAnchor.constraint(equalTo: topCard.topAnchor))
+      }
+
+      constraints.append(contentsOf: [
+        picker.leadingAnchor.constraint(equalTo: topCard.leadingAnchor),
+        picker.trailingAnchor.constraint(equalTo: topCard.trailingAnchor),
+        picker.bottomAnchor.constraint(equalTo: separator.topAnchor),
       ])
 
+      NSLayoutConstraint.activate(constraints)
+
+      // Start offscreen for slide-up animation
+      containerView.transform = CGAffineTransform(translationX: 0, y: 400)
+
       self.activeViewController = modalVC
-      topVC.present(modalVC, animated: true, completion: nil)
+      topVC.present(modalVC, animated: true) {
+        UIView.animate(withDuration: 0.28, delay: 0, options: [.curveEaseOut], animations: {
+          containerView.transform = .identity
+        }, completion: nil)
+      }
     }
+  }
+
+  @objc private func handlePickerDateChanged(_ sender: UIDatePicker) {
+    storedTimestamp = sender.date.timeIntervalSince1970 * 1000
   }
 
   @objc private func handleConfirmTap() {
@@ -411,16 +516,31 @@ public class DateTimePickerKitImpl: NSObject {
 
   private func cleanupAndDismiss(action: String, completion: (() -> Void)? = nil) {
     let vc = activeViewController
+    let container = activeContainerView
+
     activeViewController = nil
+    activeContainerView = nil
     activePicker = nil
     isPickerOpen = false
     activeResolve = nil
     activeReject = nil
 
-    if let presenting = vc?.presentingViewController {
-      presenting.dismiss(animated: true, completion: completion)
+    let finishDismiss = {
+      if let presenting = vc?.presentingViewController {
+        presenting.dismiss(animated: true, completion: completion)
+      } else {
+        vc?.dismiss(animated: true, completion: completion)
+      }
+    }
+
+    if let containerView = container {
+      UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseIn], animations: {
+        containerView.transform = CGAffineTransform(translationX: 0, y: 400)
+      }) { _ in
+        finishDismiss()
+      }
     } else {
-      vc?.dismiss(animated: true, completion: completion)
+      finishDismiss()
     }
   }
 
