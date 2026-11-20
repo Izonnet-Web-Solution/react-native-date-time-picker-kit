@@ -11,27 +11,55 @@ A high-performance, production-ready date and time picker toolkit for React Nati
 
 ---
 
-## 📸 Visual Showcase & Screenshots
+## 📸 Visual Showcase: Function-by-Function Previews
 
-### 🤖 Android Native Screenshots
+### 1️⃣ Function: Native Date Selection (iOS vs. Android)
+Direct native dialog integration powered by iOS Swift `UIDatePicker` and Android Kotlin `DatePickerDialog`.
 
 <div align="center">
 
-| Android Native DatePickerDialog (Calendar View) | Android Native DatePickerDialog (Action & Confirmation) |
+| iOS Native UIDatePicker | Android Native DatePickerDialog |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_native_datepicker.png" width="300" alt="Android Native DatePickerDialog" /><br/><sub><b>Android Native DatePickerDialog</b><br/>(Material theme header, circular date highlight, month navigation)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_native_datepicker.png" width="300" alt="Android Native DatePickerDialog Confirmation" /><br/><sub><b>Strict Bounds & Fast Native Interaction</b><br/>(Min/max dates, immediate Kotlin callback response)</sub> |
+| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_native_datepicker.png" width="270" alt="iOS Native DatePicker" /><br/><sub><b>iOS Swift UIKit Dialog</b><br/>(Compact & inline interactive calendar)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_native_datepicker.png" width="270" alt="Android Native DatePicker" /><br/><sub><b>Android Kotlin Dialog</b><br/>(Material header, circular selection, year toggle)</sub> |
 
 </div>
 
 ---
 
-### 🍎 iOS Native & Component Screenshots
+### 2️⃣ Function: Native Time & Clock Selection (iOS vs. Android)
+12-hour/24-hour time picking with radial clock hand, step intervals, and smooth wheel gestures.
 
 <div align="center">
 
-| iOS Native UIDatePicker | iOS DateTime Modal Sheet | iOS Countdown Timer Wheels | Components & Theming Catalog |
-| :---: | :---: | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_native_datepicker.png" width="235" alt="iOS Native DatePicker" /><br/><sub><b>Native UIDatePicker</b><br/>(Swift UIKit, compact & inline style)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_datetime_picker.png" width="235" alt="iOS DateTime Picker" /><br/><sub><b>DateTime Modal Sheet</b><br/>(Dual date & time tabs, bottom-sheet)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_countdown_picker.png" width="235" alt="iOS Countdown Picker" /><br/><sub><b>Countdown Wheel Picker</b><br/>(Smooth gesture scrolling & haptics)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_components_overview.png" width="235" alt="iOS Components Overview" /><br/><sub><b>Component Catalog</b><br/>(Calendar, Clock, Presets, Dark mode)</sub> |
+| Android Native TimePickerDialog (Clock Face) | iOS Native Countdown & Time Wheels |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_native_timepicker.png" width="270" alt="Android Native TimePickerDialog" /><br/><sub><b>Android Native Clock Dialog</b><br/>(Radial clock hand, AM/PM toggle, keyboard input)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_countdown_picker.png" width="270" alt="iOS Countdown Picker" /><br/><sub><b>iOS Countdown & Time Wheels</b><br/>(Triple wheel stepper, haptics, minute intervals)</sub> |
+
+</div>
+
+---
+
+### 3️⃣ Function: Unified DateTime Picker (Dual Date & Time Mode)
+Sequential and tabbed date and time selection in an elegant bottom-sheet modal.
+
+<div align="center">
+
+| iOS Unified DateTime Modal Sheet | Interactive Component Showcase |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_datetime_picker.png" width="270" alt="iOS DateTime Picker" /><br/><sub><b>Bottom Sheet Presentation</b><br/>(Quick switch between date and time)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_components_overview.png" width="270" alt="Components Catalog" /><br/><sub><b>Component Catalog</b><br/>(Calendar, Clock, Presets, Dark mode)</sub> |
+
+</div>
+
+---
+
+### 4️⃣ Function: Custom Calendar, Date Range & Appointment Time Slots
+Pure React Native customizable components for complex booking, scheduling, and range selection.
+
+<div align="center">
+
+| Custom Calendar & Month/Year Grid | Date Range Picker with Quick Presets | Appointment Time Slots & Scroll Wheels |
+| :---: | :---: | :---: |
+| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_custom_calendar.png" width="250" alt="Custom Calendar" /><br/><sub><b>Custom Calendar</b><br/>(Marked dots, badges, first day of week)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_date_range.png" width="250" alt="Date Range Picker" /><br/><sub><b>Date Range Picker</b><br/>(Today, Last 7 Days, This Month presets)</sub> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_slots_wheel.png" width="250" alt="Appointment Time Slots" /><br/><sub><b>Time Slots & Wheels</b><br/>(30-min intervals, booked slots, smooth scroll)</sub> |
 
 </div>
 
@@ -314,8 +342,12 @@ Dedicated date picker with calendar grid, presets bar, and min/max year constrai
 Dedicated time selector with 12h/24h toggle, minute stepping, and time bounds clamping.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_countdown_picker.png" width="250" alt="TimePicker Countdown Wheel" />
-  <p><sub><b>TimePicker & Countdown Wheel Picker with Minute Stepping</b></sub></p>
+
+| Android Native TimePickerDialog (Clock Face) | iOS Native Countdown & Time Wheels |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_native_timepicker.png" width="250" alt="Android Time Dialog" /> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_countdown_picker.png" width="250" alt="iOS Time Wheel" /> |
+| <sub><b>Android Material Clock Dialog</b></sub> | <sub><b>iOS Countdown & Stepper Wheels</b></sub> |
+
 </div>
 
 ```tsx
@@ -332,6 +364,11 @@ Dedicated time selector with 12h/24h toggle, minute stepping, and time bounds cl
 ### 4. DateRangePicker
 
 Select start and end dates with highlighted range bands and pre-configured range presets.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_date_range.png" width="260" alt="Date Range Picker with Presets" />
+  <p><sub><b>DateRangePicker: Range Highlight with Quick Presets (7 Days, 30 Days, This Month)</b></sub></p>
+</div>
 
 ```tsx
 <DateRangePicker
@@ -354,8 +391,12 @@ Select start and end dates with highlighted range bands and pre-configured range
 Inline month calendar with customizable dots, badges, and first day of the week.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_components_overview.png" width="250" alt="CalendarPicker and UI Components" />
-  <p><sub><b>CalendarPicker with Event Badges, Dots & Custom Palette</b></sub></p>
+
+| iOS Custom Calendar with Badges | Android Custom Calendar & Month Grid |
+| :---: | :---: |
+| <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/ios_components_overview.png" width="250" alt="iOS Calendar with Badges" /> | <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_custom_calendar.png" width="250" alt="Android Custom Calendar" /> |
+| <sub><b>Calendar with Event Badges & Clock</b></sub> | <sub><b>Month & Decade Grid View</b></sub> |
+
 </div>
 
 ```tsx
@@ -431,6 +472,11 @@ Smooth, gesture-driven iOS-style scroll wheel picker.
 ### 10. TimeSlotPicker
 
 Appointment scheduler grid with automatic interval generation and booked slot disabling.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Izonnet-Web-Solution/react-native-date-time-picker-kit/main/docs/assets/android_slots_wheel.png" width="260" alt="Appointment Time Slots and Wheel Picker" />
+  <p><sub><b>TimeSlotPicker (30-min booking intervals) & WheelPicker Selection</b></sub></p>
+</div>
 
 ```tsx
 <TimeSlotPicker
