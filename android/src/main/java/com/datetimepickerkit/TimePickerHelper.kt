@@ -87,23 +87,19 @@ class TimePickerHelper(
       else -> 0
     }
 
-    // Locale configuration support
-    val dialogContext = if (options.hasKey("locale") && !options.isNull("locale")) {
+    // Locale configuration support without breaking Activity window token
+    if (options.hasKey("locale") && !options.isNull("locale")) {
       val localeStr = options.getString("locale")
       if (!localeStr.isNullOrEmpty()) {
         try {
           val loc = Locale.forLanguageTag(localeStr.replace('_', '-'))
+          Locale.setDefault(loc)
           val config = Configuration(context.resources.configuration)
           config.setLocale(loc)
-          context.createConfigurationContext(config)
-        } catch (_: Exception) {
-          context
-        }
-      } else {
-        context
+          @Suppress("DEPRECATION")
+          context.resources.updateConfiguration(config, context.resources.displayMetrics)
+        } catch (_: Exception) {}
       }
-    } else {
-      context
     }
 
     val hapticEnabled = if (options.hasKey("hapticFeedbackEnabled") && !options.isNull("hapticFeedbackEnabled")) {
@@ -121,7 +117,7 @@ class TimePickerHelper(
         calendar.set(Calendar.MILLISECOND, 0)
         if (hapticEnabled) {
           try {
-            timePickerDialog?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            (context as? android.app.Activity)?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
           } catch (_: Exception) {}
         }
         resolveSuccess("confirmed", calendar.timeInMillis)
@@ -129,9 +125,9 @@ class TimePickerHelper(
     }
 
     val dialog = if (themeId != 0) {
-      TimePickerDialog(dialogContext, themeId, timeSetListener, currentHour, currentMinute, is24Hour)
+      TimePickerDialog(context, themeId, timeSetListener, currentHour, currentMinute, is24Hour)
     } else {
-      TimePickerDialog(dialogContext, timeSetListener, currentHour, currentMinute, is24Hour)
+      TimePickerDialog(context, timeSetListener, currentHour, currentMinute, is24Hour)
     }
 
     // Custom title

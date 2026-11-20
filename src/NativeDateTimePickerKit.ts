@@ -1,5 +1,5 @@
 import type { TurboModule } from 'react-native';
-import { TurboModuleRegistry } from 'react-native';
+import { NativeModules, TurboModuleRegistry } from 'react-native';
 
 export type UnsafeObject = Object;
 
@@ -16,4 +16,5 @@ export interface Spec extends TurboModule {
   resetPicker(): Promise<boolean>;
 }
 
-export default TurboModuleRegistry.get<Spec>('DateTimePickerKit');
+export default (TurboModuleRegistry.get<Spec>('DateTimePickerKit') ||
+  NativeModules.DateTimePickerKit) as Spec | null;

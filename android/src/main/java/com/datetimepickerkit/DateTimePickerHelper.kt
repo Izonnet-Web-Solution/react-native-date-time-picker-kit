@@ -53,23 +53,19 @@ class DateTimePickerHelper(
     return currentDialog!!
   }
 
-  private fun getDialogContext(): Context {
-    return if (options.hasKey("locale") && !options.isNull("locale")) {
+  private fun configureLocale() {
+    if (options.hasKey("locale") && !options.isNull("locale")) {
       val localeStr = options.getString("locale")
       if (!localeStr.isNullOrEmpty()) {
         try {
           val loc = Locale.forLanguageTag(localeStr.replace('_', '-'))
+          Locale.setDefault(loc)
           val config = Configuration(context.resources.configuration)
           config.setLocale(loc)
-          context.createConfigurationContext(config)
-        } catch (_: Exception) {
-          context
-        }
-      } else {
-        context
+          @Suppress("DEPRECATION")
+          context.resources.updateConfiguration(config, context.resources.displayMetrics)
+        } catch (_: Exception) {}
       }
-    } else {
-      context
     }
   }
 
@@ -86,24 +82,32 @@ class DateTimePickerHelper(
   }
 
   private fun showDateStep() {
+    configureLocale()
     val year = calendar.get(Calendar.YEAR)
     val month = calendar.get(Calendar.MONTH)
     val day = calendar.get(Calendar.DAY_OF_MONTH)
-    val dialogCtx = getDialogContext()
     val themeId = getThemeId()
 
     val dateSetListener = { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
       calendar.set(Calendar.YEAR, selectedYear)
       calendar.set(Calendar.MONTH, selectedMonth)
       calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
+      val hapticEnabled = if (options.hasKey("hapticFeedbackEnabled") && !options.isNull("hapticFeedbackEnabled")) {
+        options.getBoolean("hapticFeedbackEnabled")
+      } else true
+      if (hapticEnabled) {
+        try {
+          (context as? android.app.Activity)?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+        } catch (_: Exception) {}
+      }
       isTransitioningToTime = true
       showTimeStep()
     }
 
     val dateDialog = if (themeId != 0) {
-      DatePickerDialog(dialogCtx, themeId, dateSetListener, year, month, day)
+      DatePickerDialog(context, themeId, dateSetListener, year, month, day)
     } else {
-      DatePickerDialog(dialogCtx, dateSetListener, year, month, day)
+      DatePickerDialog(context, dateSetListener, year, month, day)
     }
 
     val minDate = if (options.hasKey("minimumDate") && !options.isNull("minimumDate")) {
@@ -169,7 +173,6 @@ class DateTimePickerHelper(
 
     val hour = calendar.get(Calendar.HOUR_OF_DAY)
     val minute = calendar.get(Calendar.MINUTE)
-    val dialogCtx = getDialogContext()
     val themeId = getThemeId()
 
     val minuteInterval = if (options.hasKey("minuteInterval") && !options.isNull("minuteInterval")) {
@@ -192,14 +195,22 @@ class DateTimePickerHelper(
         calendar.set(Calendar.MINUTE, snappedMinute)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
+        val hapticEnabled = if (options.hasKey("hapticFeedbackEnabled") && !options.isNull("hapticFeedbackEnabled")) {
+          options.getBoolean("hapticFeedbackEnabled")
+        } else true
+        if (hapticEnabled) {
+          try {
+            (context as? android.app.Activity)?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+          } catch (_: Exception) {}
+        }
         resolveSuccess("confirmed", calendar.timeInMillis)
       }
     }
 
     val timeDialog = if (themeId != 0) {
-      TimePickerDialog(dialogCtx, themeId, timeSetListener, hour, minute, is24Hour)
+      TimePickerDialog(context, themeId, timeSetListener, hour, minute, is24Hour)
     } else {
-      TimePickerDialog(dialogCtx, timeSetListener, hour, minute, is24Hour)
+      TimePickerDialog(context, timeSetListener, hour, minute, is24Hour)
     }
 
     timeDialog.setTitle("Select Time")

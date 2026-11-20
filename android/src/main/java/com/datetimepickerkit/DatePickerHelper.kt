@@ -63,23 +63,19 @@ class DatePickerHelper(
       else -> 0 // default dialog theme
     }
 
-    // Locale configuration support
-    val dialogContext = if (options.hasKey("locale") && !options.isNull("locale")) {
+    // Locale configuration support without breaking Activity window token
+    if (options.hasKey("locale") && !options.isNull("locale")) {
       val localeStr = options.getString("locale")
       if (!localeStr.isNullOrEmpty()) {
         try {
           val loc = Locale.forLanguageTag(localeStr.replace('_', '-'))
+          Locale.setDefault(loc)
           val config = Configuration(context.resources.configuration)
           config.setLocale(loc)
-          context.createConfigurationContext(config)
-        } catch (_: Exception) {
-          context
-        }
-      } else {
-        context
+          @Suppress("DEPRECATION")
+          context.resources.updateConfiguration(config, context.resources.displayMetrics)
+        } catch (_: Exception) {}
       }
-    } else {
-      context
     }
 
     val hapticEnabled = if (options.hasKey("hapticFeedbackEnabled") && !options.isNull("hapticFeedbackEnabled")) {
@@ -94,7 +90,7 @@ class DatePickerHelper(
         calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
         if (hapticEnabled) {
           try {
-            datePickerDialog?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            (context as? android.app.Activity)?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
           } catch (_: Exception) {}
         }
         resolveSuccess("confirmed", calendar.timeInMillis)
@@ -102,9 +98,9 @@ class DatePickerHelper(
     }
 
     val dialog = if (themeId != 0) {
-      DatePickerDialog(dialogContext, themeId, dateSetListener, year, month, day)
+      DatePickerDialog(context, themeId, dateSetListener, year, month, day)
     } else {
-      DatePickerDialog(dialogContext, dateSetListener, year, month, day)
+      DatePickerDialog(context, dateSetListener, year, month, day)
     }
 
     val datePicker = dialog.datePicker
