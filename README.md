@@ -222,6 +222,12 @@ const styles = StyleSheet.create({
 
 ## 8. Date Picker Example
 
+<p align="center">
+  <img src="screenshots/ios/date-picker.png" width="260" alt="iOS Date Picker" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/android/date-picker.png" width="260" alt="Android Date Picker" />
+</p>
+
 ```tsx
 <DateTimePickerModal
   isVisible={isDateVisible}
@@ -241,6 +247,12 @@ const styles = StyleSheet.create({
 
 ## 9. Time Picker Example
 
+<p align="center">
+  <img src="screenshots/ios/time-picker.png" width="260" alt="iOS Time Picker" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/android/time-picker.png" width="260" alt="Android Time Picker" />
+</p>
+
 ```tsx
 <DateTimePickerModal
   isVisible={isTimeVisible}
@@ -259,6 +271,12 @@ const styles = StyleSheet.create({
 ---
 
 ## 10. DateTime Picker Example
+
+<p align="center">
+  <img src="screenshots/ios/datetime-picker.png" width="260" alt="iOS DateTime Picker" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/android/datetime-picker.png" width="260" alt="Android DateTime Picker" />
+</p>
 
 ```tsx
 <DateTimePickerModal
@@ -503,7 +521,13 @@ The library contains built-in concurrency guards (`PICKER_ALREADY_OPEN`). Ensure
 
 ## 24. Example Application
 
-The repository includes a complete example application under `example/`.
+The repository includes a complete interactive test suite application under `example/`.
+
+<p align="center">
+  <img src="screenshots/example/main-screen.png" width="260" alt="iOS Interactive Test Suite" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="screenshots/example/selected-output.png" width="260" alt="Android Interactive Test Suite" />
+</p>
 
 To run:
 ```bash
