@@ -82,12 +82,21 @@ class DatePickerHelper(
       context
     }
 
+    val hapticEnabled = if (options.hasKey("hapticFeedbackEnabled") && !options.isNull("hapticFeedbackEnabled")) {
+      options.getBoolean("hapticFeedbackEnabled")
+    } else true
+
     val dateSetListener = { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
       if (!isHandled) {
         isHandled = true
         calendar.set(Calendar.YEAR, selectedYear)
         calendar.set(Calendar.MONTH, selectedMonth)
         calendar.set(Calendar.DAY_OF_MONTH, selectedDay)
+        if (hapticEnabled) {
+          try {
+            datePickerDialog?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+          } catch (_: Exception) {}
+        }
         resolveSuccess("confirmed", calendar.timeInMillis)
       }
     }

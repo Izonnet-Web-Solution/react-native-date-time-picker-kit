@@ -106,6 +106,10 @@ class TimePickerHelper(
       context
     }
 
+    val hapticEnabled = if (options.hasKey("hapticFeedbackEnabled") && !options.isNull("hapticFeedbackEnabled")) {
+      options.getBoolean("hapticFeedbackEnabled")
+    } else true
+
     val timeSetListener = { _: TimePicker, hourOfDay: Int, minute: Int ->
       if (!isHandled) {
         isHandled = true
@@ -115,6 +119,11 @@ class TimePickerHelper(
         calendar.set(Calendar.MINUTE, currentMinute)
         calendar.set(Calendar.SECOND, 0)
         calendar.set(Calendar.MILLISECOND, 0)
+        if (hapticEnabled) {
+          try {
+            timePickerDialog?.window?.decorView?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+          } catch (_: Exception) {}
+        }
         resolveSuccess("confirmed", calendar.timeInMillis)
       }
     }

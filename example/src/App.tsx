@@ -413,6 +413,40 @@ export default function App() {
           </Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.testButton}
+          activeOpacity={0.7}
+          onPress={() =>
+            runTest('Haptic Feedback ON (Vibration Enabled)', {
+              mode: 'date',
+              hapticFeedbackEnabled: true,
+              headerTextIOS: 'Haptic Feedback ON',
+            })
+          }
+        >
+          <Text style={styles.testButtonText}>Haptic Feedback: ON 📳</Text>
+          <Text style={styles.testButtonSub}>
+            Physical vibration pulse when scrolling wheels (iOS)
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.testButton}
+          activeOpacity={0.7}
+          onPress={() =>
+            runTest('Haptic Feedback OFF (Silent Mode)', {
+              mode: 'date',
+              hapticFeedbackEnabled: false,
+              headerTextIOS: 'Haptic Feedback OFF',
+            })
+          }
+        >
+          <Text style={styles.testButtonText}>Haptic Feedback: OFF 🔕</Text>
+          <Text style={styles.testButtonSub}>
+            Disables physical vibration when scrolling wheels
+          </Text>
+        </TouchableOpacity>
+
         {/* 4. Localization */}
         <Text style={styles.sectionTitle}>4. 🌍 Localization & Language</Text>
 
