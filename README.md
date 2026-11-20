@@ -1,31 +1,126 @@
 # @izonnet-web-solution/react-native-date-time-modal
 
-A high-performance, production-ready, strongly typed cross-platform date and time picker library for React Native. Engineered as a modern, zero-dependency, fully native drop-in replacement for `react-native-modal-datetime-picker`.
-
-Powered by native Swift on iOS (`UIDatePicker` in an ActionSheet two-card layout) and native Kotlin on Android (`DatePickerDialog` and `TimePickerDialog`), seamlessly communicating through React Native TurboModules and Codegen.
+> High-performance, production-ready, fully native cross-platform Date & Time Picker library for React Native. Engineered with **zero runtime dependencies** as a drop-in replacement for `react-native-modal-datetime-picker`.
 
 [![npm version](https://img.shields.io/npm/v/@izonnet-web-solution/react-native-date-time-modal.svg)](https://www.npmjs.com/package/@izonnet-web-solution/react-native-date-time-modal)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://www.typescriptlang.org/)
 [![Zero Runtime Dependencies](https://img.shields.io/badge/dependencies-0-success.svg)](https://www.npmjs.com/package/@izonnet-web-solution/react-native-date-time-modal)
 [![Architecture: TurboModule](https://img.shields.io/badge/Architecture-New%20Architecture%20%2F%20TurboModule-purple.svg)](https://reactnative.dev/docs/the-new-architecture/landing-page)
+[![Tests Passing](https://img.shields.io/badge/tests-141%20passing-brightgreen.svg)](https://github.com/Izonnet-Web-Solution/react-native-date-time-picker-kit)
 
 ---
 
-## 🌟 Key Features
+## 📸 Visual Showcase
 
-- **100% Fully Native**: Swift on iOS and Kotlin on Android. No web views, no external JS date libraries.
-- **Zero Third-Party Dependencies**: Works directly with native OS dialogs.
-- **Drop-in Replacement for `react-native-modal-datetime-picker`**: Same component names, props (`isVisible`, `date`, `mode`, `onConfirm`, `onCancel`, `onHide`, `confirmTextIOS`, `cancelTextIOS`, etc.).
-- **Native iOS Modal UI**: Standard iOS ActionSheet appearance featuring two separate floating rounded cards (Top card: UIDatePicker wheels spinner + hairline divider + full-width Confirm button; Bottom card: full-width Cancel button) with smooth slide-up animation and dimmed backdrop overlay.
-- **Native Android Dialog UI**: Material `DatePickerDialog` and `TimePickerDialog` with 12/24-hour support, dark theme, and boundary safety.
-- **Modes Supported**: `'date'`, `'time'`, `'datetime'`, and `'countdown'` (iOS).
-- **Comprehensive Callbacks**: `onConfirm`, `onCancel`, `onHide`, `onChange`, `onDismiss`, `onOpen`, and `onError`.
-- **Imperative & Declarative**: Use declaratively via `<DateTimePickerModal isVisible={...} />` or imperatively via `openDateTimePickerModal({ ... })` or `useDateTimePicker()`.
+<div align="center">
+
+| iOS Date Picker (ActionSheet Layout) | Android Date Picker (Material Dialog) |
+| :---: | :---: |
+| <img src="screenshots/ios/date-picker.png" width="300" alt="iOS Date Picker" /><br/><sub><b>iOS UIKit ActionSheet Two-Card Modal</b><br/>(UIDatePicker Wheels + Confirm + Cancel)</sub> | <img src="screenshots/android/date-picker.png" width="300" alt="Android Date Picker" /><br/><sub><b>Android Native Material Dialog</b><br/>(Material DatePickerDialog header & calendar)</sub> |
+
+| iOS Time Picker | Android Time Picker (Radial Clock) |
+| :---: | :---: |
+| <img src="screenshots/ios/time-picker.png" width="300" alt="iOS Time Picker" /><br/><sub><b>iOS Time Wheels Picker</b><br/>(Haptic feedback, minute intervals)</sub> | <img src="screenshots/android/time-picker.png" width="300" alt="Android Time Picker" /><br/><sub><b>Android Radial Clock Dialog</b><br/>(12h/24h toggle, AM/PM, smooth selection)</sub> |
+
+| iOS DateTime Picker | Android DateTime Presentation |
+| :---: | :---: |
+| <img src="screenshots/ios/datetime-picker.png" width="300" alt="iOS DateTime Picker" /><br/><sub><b>iOS Unified DateTime Presentation</b><br/>(Smooth wheels date & time combined modal)</sub> | <img src="screenshots/android/datetime-picker.png" width="300" alt="Android DateTime Picker" /><br/><sub><b>Android DateTime Flow</b><br/>(Sequential native DatePickerDialog followed by TimePickerDialog)</sub> |
+
+| Example App (iOS) | Example App (Android) |
+| :---: | :---: |
+| <img src="screenshots/example/main-screen.png" width="300" alt="Example App iOS" /><br/><sub><b>iOS Example Screen</b><br/>(Centered interactive action buttons)</sub> | <img src="screenshots/example/selected-output.png" width="300" alt="Example App Android" /><br/><sub><b>Android Example Screen</b><br/>(Material theme button layout)</sub> |
+
+</div>
 
 ---
 
-## 📦 Installation
+## Table of Contents
+
+1. [Library Introduction](#1-library-introduction)
+2. [Features](#2-features)
+3. [iOS and Android Support](#3-ios-and-android-support)
+4. [Architecture](#4-architecture)
+5. [Installation](#5-installation)
+6. [React Native Compatibility](#6-react-native-compatibility)
+7. [Basic Usage](#7-basic-usage)
+8. [Date Picker Example](#8-date-picker-example)
+9. [Time Picker Example](#9-time-picker-example)
+10. [DateTime Picker Example](#10-datetime-picker-example)
+11. [Modal Usage](#11-modal-usage)
+12. [Hook Usage](#12-hook-usage)
+13. [Imperative Ref Methods](#13-imperative-ref-methods)
+14. [Complete Props Documentation](#14-complete-props-documentation)
+15. [Callback Documentation](#15-callback-documentation)
+16. [TypeScript Examples](#16-typescript-examples)
+17. [Customization](#17-customization)
+18. [Theme Support](#18-theme-support)
+19. [Localization](#19-localization)
+20. [Date Validation](#20-date-validation)
+21. [Platform-Specific Behavior](#21-platform-specific-behavior)
+22. [Platform Limitations](#22-platform-limitations)
+23. [Troubleshooting](#23-troubleshooting)
+24. [Example Application](#24-example-application)
+25. [Contributing](#25-contributing)
+26. [License](#26-license)
+
+---
+
+## 1. Library Introduction
+
+`@izonnet-web-solution/react-native-date-time-modal` is a specialized, lightweight React Native library providing native date and time picking functionality. Built directly on top of Swift for iOS and Kotlin for Android through React Native's modern TurboModule architecture, it guarantees 60fps animations, zero bridge lag, and native OS look-and-feel without any third-party dependencies.
+
+---
+
+## 2. Features
+
+- **100% Fully Native**: Swift (`UIDatePicker`) on iOS; Kotlin (`DatePickerDialog` & `TimePickerDialog`) on Android.
+- **Zero Runtime Dependencies**: No external JavaScript date libraries, bloated moment/dayjs bundles, or custom UI engines.
+- **Drop-in Replacement for `react-native-modal-datetime-picker`**: Identical component names, props, and callback signatures.
+- **ActionSheet Two-Card UI on iOS**: Top card contains `UIDatePicker` + separator + Confirm button; bottom card contains Cancel button with smooth slide-up animation.
+- **Android Material Dialogs**: Clean Android SDK Material pickers with boundary safety and 12h/24h toggle.
+- **Four Picker Modes**: `'date'`, `'time'`, `'datetime'`, and `'countdown'` (iOS).
+- **Dual Declarative & Imperative APIs**: Use via React JSX `<DateTimePickerModal isVisible={...} />` or async `openDateTimePickerModal({ ... })`.
+- **Comprehensive Lifecycle Events**: `onConfirm`, `onCancel`, `onHide`, `onChange`, `onDismiss`, `onOpen`, and `onError`.
+- **Strict TypeScript Typing**: Fully typed props, ref interfaces, and union types.
+
+---
+
+## 3. iOS and Android Support
+
+| Platform | Native Component | Min OS Version | New Architecture (TurboModule) | Old Architecture (Bridge) |
+| :--- | :--- | :---: | :---: | :---: |
+| **iOS** | `UIDatePicker` (UIKit / Swift) | iOS 13.4+ | ✅ Supported | ✅ Supported |
+| **Android** | `DatePickerDialog` & `TimePickerDialog` (Kotlin) | Android 5.0 (API 21+) | ✅ Supported | ✅ Supported |
+
+---
+
+## 4. Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 React Native TypeScript Layer               │
+│                                                             │
+│   <DateTimePickerModal />  │  <DateTimePicker />            │
+│   openDateTimePickerModal()│  useDateTimePicker()           │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                       TurboModule / JSI
+                  (NativeDateTimePickerKitSpec)
+                               │
+        ┌──────────────────────┴──────────────────────┐
+        ▼                                             ▼
+┌──────────────────────────────┐        ┌──────────────────────────────┐
+│         iOS (Swift)          │        │       Android (Kotlin)       │
+│ • UIDatePicker (UIKit)       │        │ • DatePickerDialog (SDK)    │
+│ • ActionSheet Two-Card UI    │        │ • TimePickerDialog (SDK)    │
+│ • Zero Third-Party Pods      │        │ • Zero Third-Party JAR/AAR   │
+└──────────────────────────────┘        └──────────────────────────────┘
+```
+
+---
+
+## 5. Installation
 
 ```bash
 # npm
@@ -38,9 +133,7 @@ yarn add @izonnet-web-solution/react-native-date-time-modal
 pnpm add @izonnet-web-solution/react-native-date-time-modal
 ```
 
-### iOS Setup
-
-Install CocoaPods dependencies:
+### iOS CocoaPods Setup
 
 ```bash
 cd ios && pod install && cd ..
@@ -48,13 +141,21 @@ cd ios && pod install && cd ..
 
 ### Android Setup
 
-No additional setup is required. The library auto-links via the React Native Gradle plugin.
+Automatic linking is fully supported. No manual changes to `MainApplication.kt` or `settings.gradle` are required.
 
 ---
 
-## 🚀 Quick Start
+## 6. React Native Compatibility
 
-### Drop-in Replacement (`DateTimePickerModal`)
+| React Native Version | Supported | Architecture |
+| :--- | :---: | :--- |
+| **0.76.x - 0.88.x+** | ✅ Yes | TurboModule (New Architecture default) |
+| **0.70.x - 0.75.x** | ✅ Yes | Backward-compatible bridge fallback |
+| **Expo (SDK 50+)** | ✅ Yes | Config plugin / prebuild auto-linking |
+
+---
+
+## 7. Basic Usage
 
 ```tsx
 import React, { useState } from 'react';
@@ -85,9 +186,6 @@ export default function App() {
         mode="date"
         onConfirm={handleConfirm}
         onCancel={hideDatePicker}
-        onHide={(isConfirmed, date) => {
-          console.log('Dialog hidden. Confirmed:', isConfirmed, date);
-        }}
       />
     </View>
   );
@@ -110,95 +208,308 @@ const styles = StyleSheet.create({
 
 ---
 
-## 🔄 Migration Guide from `react-native-modal-datetime-picker`
+## 8. Date Picker Example
 
-Migrating is a 1-line import change:
-
-```diff
-- import DateTimePickerModal from 'react-native-modal-datetime-picker';
-+ import DateTimePickerModal from '@izonnet-web-solution/react-native-date-time-modal';
+```tsx
+<DateTimePickerModal
+  isVisible={isDateVisible}
+  mode="date"
+  date={new Date()}
+  minimumDate={new Date(2020, 0, 1)}
+  maximumDate={new Date(2030, 11, 31)}
+  onConfirm={(date) => {
+    console.log('Selected date:', date);
+    setDateVisible(false);
+  }}
+  onCancel={() => setDateVisible(false)}
+/>
 ```
 
-All standard props and callbacks are identical:
+---
 
-| Prop / Callback | `react-native-modal-datetime-picker` | `@izonnet-web-solution/react-native-date-time-modal` |
-| :--- | :---: | :---: |
-| `isVisible` | ✅ Supported | ✅ Supported |
-| `date` / `value` | ✅ Supported | ✅ Supported |
-| `mode` (`'date'`, `'time'`, `'datetime'`) | ✅ Supported | ✅ Supported |
-| `onConfirm: (date: Date) => void` | ✅ Supported | ✅ Supported |
-| `onCancel: () => void` | ✅ Supported | ✅ Supported |
-| `onHide: (isConfirmed: boolean, date?: Date) => void` | ✅ Supported | ✅ Supported |
-| `confirmTextIOS` | ✅ Supported | ✅ Supported |
-| `cancelTextIOS` | ✅ Supported | ✅ Supported |
-| `buttonTextColorIOS` | ✅ Supported | ✅ Supported |
-| `accentColorIOS` | ✅ Supported | ✅ Supported |
-| `isDarkModeEnabled` | ✅ Supported | ✅ Supported |
-| `minimumDate` / `maximumDate` | ✅ Supported | ✅ Supported |
-| `minuteInterval` | ✅ Supported | ✅ Supported |
-| `timeZoneOffsetInMinutes` | ✅ Supported | ✅ Supported |
-| `is24Hour` | ✅ Supported | ✅ Supported |
+## 9. Time Picker Example
+
+```tsx
+<DateTimePickerModal
+  isVisible={isTimeVisible}
+  mode="time"
+  date={new Date()}
+  is24Hour={false}
+  minuteInterval={15}
+  onConfirm={(time) => {
+    console.log('Selected time:', time);
+    setTimeVisible(false);
+  }}
+  onCancel={() => setTimeVisible(false)}
+/>
+```
 
 ---
 
-## 📖 API Reference
+## 10. DateTime Picker Example
 
-### Exported Components
-
-- `DateTimePickerModal` (default and named export): The drop-in modal date/time picker.
-- `DateTimePicker`: Core unified component.
-- `DatePicker`: Convenience wrapper with `mode="date"`.
-- `TimePicker`: Convenience wrapper with `mode="time"`.
-
-### Imperative Methods & Hooks
-
-- `openDateTimePickerModal(options)`: Open the modal imperatively via async Promise.
-- `useDateTimePicker(options)`: React hook managing picker state, visibility, and value.
-- `NativeDateTimePicker`: Direct TurboModule bridge methods (`openDatePicker`, `openTimePicker`, `openDateTimePicker`, `openCountdownPicker`, `closePicker`, `confirmPicker`, `cancelPicker`).
+```tsx
+<DateTimePickerModal
+  isVisible={isDateTimeVisible}
+  mode="datetime"
+  date={new Date()}
+  onConfirm={(dateTime) => {
+    console.log('Selected date and time:', dateTime);
+    setDateTimeVisible(false);
+  }}
+  onCancel={() => setDateTimeVisible(false)}
+/>
+```
 
 ---
 
-## 📋 Props Table
+## 11. Modal Usage
+
+`DateTimePickerModal` wraps the native TurboModule and presents an OS-level modal window:
+- **On iOS**: ActionSheet two-card modal sliding from bottom.
+- **On Android**: System Material dialog centered on screen.
+
+Tapping the backdrop overlay dismisses the picker and invokes `onCancel` followed by `onHide(false)`.
+
+---
+
+## 12. Hook Usage
+
+The `useDateTimePicker` hook provides headless state management:
+
+```tsx
+import { useDateTimePicker } from '@izonnet-web-solution/react-native-date-time-modal';
+
+export default function HookExample() {
+  const { isVisible, open, close, value, onConfirm, onCancel } = useDateTimePicker({
+    mode: 'date',
+    initialDate: new Date(),
+  });
+
+  return (
+    <View>
+      <Button title="Open Picker" onPress={open} />
+      <Text>Value: {value?.toLocaleDateString()}</Text>
+
+      <DateTimePickerModal
+        isVisible={isVisible}
+        date={value}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    </View>
+  );
+}
+```
+
+---
+
+## 13. Imperative Ref Methods
+
+You can trigger the picker imperatively using a `ref` or `openDateTimePickerModal`:
+
+```tsx
+import { useRef } from 'react';
+import {
+  DateTimePicker,
+  type DateTimePickerRef,
+  openDateTimePickerModal,
+} from '@izonnet-web-solution/react-native-date-time-modal';
+
+// Method 1: Using async helper
+const pickDateAsync = async () => {
+  const date = await openDateTimePickerModal({
+    mode: 'date',
+    date: new Date(),
+  });
+  if (date) {
+    console.log('Picked date:', date);
+  }
+};
+
+// Method 2: Using Component Ref
+const pickerRef = useRef<DateTimePickerRef>(null);
+
+const handleOpen = () => pickerRef.current?.open();
+const handleClose = () => pickerRef.current?.close();
+const handleConfirm = () => pickerRef.current?.confirm();
+const handleCancel = () => pickerRef.current?.cancel();
+const handleReset = () => pickerRef.current?.reset();
+```
+
+---
+
+## 14. Complete Props Documentation
 
 | Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `isVisible` | `boolean` | `false` | Controls whether the picker modal is visible. |
-| `date` | `Date \| number \| string` | `new Date()` | The selected or initial date value. |
-| `mode` | `'date' \| 'time' \| 'datetime' \| 'countdown'` | `'date'` | Selection mode. |
-| `onConfirm` | `(date: Date) => void` | Required | Callback called when the user confirms their selection. |
-| `onCancel` | `() => void` | Required | Callback called when the user cancels. |
-| `onHide` | `(confirmed: boolean, date?: Date) => void` | Optional | Called when modal is completely hidden. |
-| `onChange` | `(date: Date) => void` | Optional | Called when intermediate date value changes. |
-| `minimumDate` | `Date \| number \| string` | `undefined` | Minimum selectable date boundary. |
-| `maximumDate` | `Date \| number \| string` | `undefined` | Maximum selectable date boundary. |
+| `isVisible` | `boolean` | `false` | Controls visibility of the modal dialog. |
+| `date` / `value` | `Date \| number \| string` | `new Date()` | Selected or initial date value. |
+| `mode` | `'date' \| 'time' \| 'datetime' \| 'countdown'` | `'date'` | Picker selection mode. |
 | `display` | `'default' \| 'spinner' \| 'compact' \| 'inline'` | `'default'` | Display presentation style. |
-| `minuteInterval` | `1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 10 \| 12 \| 15 \| 20 \| 30` | `1` | Minute step interval. |
+| `minimumDate` / `minDate` | `Date \| number \| string` | `undefined` | Lower boundary date. |
+| `maximumDate` / `maxDate` | `Date \| number \| string` | `undefined` | Upper boundary date. |
+| `minuteInterval` | `1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 10 \| 12 \| 15 \| 20 \| 30` | `1` | Minute snapping interval. |
 | `timeZoneOffsetInMinutes` | `number` | `undefined` | Timezone offset in minutes relative to GMT/UTC. |
-| `is24Hour` | `boolean` | `false` | Force 24-hour time representation on Android. |
-| `isDarkModeEnabled` | `boolean` | `undefined` | Explicitly enforce dark or light appearance. |
+| `is24Hour` | `boolean` | `false` | Force 24-hour time presentation on Android. |
+| `isDarkModeEnabled` | `boolean` | `undefined` | Force Dark Mode appearance. |
 | `confirmTextIOS` | `string` | `'Confirm'` | Label for the iOS confirmation button. |
 | `cancelTextIOS` | `string` | `'Cancel'` | Label for the iOS cancel button. |
-| `buttonTextColorIOS` | `string` | `'#007AFF'` | Color for iOS action buttons. |
-| `accentColorIOS` | `string` | `'#007AFF'` | Tint color for iOS picker controls. |
+| `accentColorIOS` | `string` | `'#007AFF'` | Color tint for iOS controls. |
+| `buttonTextColorIOS` | `string` | `'#007AFF'` | Text color for iOS buttons. |
 | `locale` | `string` | Device default | Locale identifier (e.g. `'en_US'`, `'es_ES'`). |
+| `testID` | `string` | `undefined` | Test identifier for automated testing. |
 
 ---
 
-## 📱 Platform Differences & Support
+## 15. Callback Documentation
 
-| Feature | iOS | Android | Notes |
-| :--- | :---: | :---: | :--- |
-| Date Mode | ✅ | ✅ | iOS uses `UIDatePicker`, Android uses `DatePickerDialog`. |
-| Time Mode | ✅ | ✅ | iOS uses `UIDatePicker`, Android uses `TimePickerDialog`. |
-| DateTime Mode | ✅ | ✅ | Sequential dialogs on Android; unified picker on iOS. |
-| Countdown Mode | ✅ | ❌ | Supported on iOS via `countDownTimer`. |
-| ActionSheet 2-Card Layout | ✅ | N/A | Matches standard iOS ActionSheet design. |
-| 12h / 24h Toggle | Auto | ✅ | Driven by `is24Hour` prop. |
-| Minute Interval | ✅ | N/A | Standard iOS picker interval. |
-| Zero External Dependencies | ✅ | ✅ | Completely native OS dialogs. |
+| Callback | Signature | Description |
+| :--- | :--- | :--- |
+| `onConfirm` | `(date: Date) => void` | Invoked when the user taps Confirm. |
+| `onCancel` | `() => void` | Invoked when the user taps Cancel or dismisses the dialog. |
+| `onHide` | `(isConfirmed: boolean, date?: Date) => void` | Invoked after the modal has completed dismissal animation. |
+| `onChange` | `(date: Date) => void` | Invoked on intermediate date or time changes. |
+| `onDismiss` | `() => void` | Invoked when the dialog is dismissed. |
+| `onOpen` | `() => void` | Invoked when the picker modal is presented. |
+| `onError` | `(error: DateTimePickerError) => void` | Invoked if an error occurs during presentation. |
 
 ---
 
-## 📄 License
+## 16. TypeScript Examples
 
-MIT © [Izonnet Web Solution](https://github.com/Izonnet-Web-Solution)
+```tsx
+import type {
+  DateTimePickerModalProps,
+  DateTimePickerConfirmEvent,
+  DateTimePickerHideEvent,
+  PickerMode,
+} from '@izonnet-web-solution/react-native-date-time-modal';
+
+const handleConfirm: DateTimePickerConfirmEvent = (date: Date) => {
+  console.log('Confirmed:', date.toISOString());
+};
+
+const handleHide: DateTimePickerHideEvent = (confirmed: boolean, date?: Date) => {
+  console.log('Hidden:', confirmed, date);
+};
+
+const mode: PickerMode = 'datetime';
+```
+
+---
+
+## 17. Customization
+
+### iOS Custom Button Text & Colors
+
+```tsx
+<DateTimePickerModal
+  isVisible={isVisible}
+  mode="date"
+  confirmTextIOS="Done"
+  cancelTextIOS="Dismiss"
+  accentColorIOS="#FF3B30"
+  buttonTextColorIOS="#007AFF"
+  onConfirm={handleConfirm}
+  onCancel={handleCancel}
+/>
+```
+
+---
+
+## 18. Theme Support
+
+The library supports light and dark themes:
+- **System Adaptive (`auto`)**: Automatically follows device appearance.
+- **Explicit Override (`isDarkModeEnabled`)**: Enforces dark mode (`true`) or light mode (`false`).
+
+```tsx
+<DateTimePickerModal
+  isVisible={isVisible}
+  isDarkModeEnabled={true}
+  onConfirm={handleConfirm}
+  onCancel={handleCancel}
+/>
+```
+
+---
+
+## 19. Localization
+
+Pass standard BCP 47 language tags (e.g. `'en_US'`, `'es_ES'`, `'fr_FR'`, `'ja_JP'`, `'hi_IN'`):
+
+```tsx
+<DateTimePickerModal
+  isVisible={isVisible}
+  locale="es_ES"
+  onConfirm={handleConfirm}
+  onCancel={handleCancel}
+/>
+```
+
+---
+
+## 20. Date Validation
+
+The library provides built-in boundary protection:
+- Dates before `minimumDate` or after `maximumDate` are clamped.
+- Invalid combinations (`minimumDate > maximumDate` or unsupported `minuteInterval`) throw structured `DateTimePickerError` instances with specific error codes.
+
+---
+
+## 21. Platform-Specific Behavior
+
+- **iOS**: Uses `UIDatePicker` in ActionSheet presentation with separate rounded cards for picker actions. Default display is `.wheels` (spinner).
+- **Android**: Uses standard Material `DatePickerDialog` (calendar grid) and `TimePickerDialog` (radial clock face).
+
+---
+
+## 22. Platform Limitations
+
+1. **Countdown Mode**: Supported only on iOS (`countDownTimer`). Android will report `UNSUPPORTED_FEATURE`.
+2. **Radial Minute Interval**: Android Material clock face natively supports minute selection; custom snapping intervals are enforced programmatically.
+
+---
+
+## 23. Troubleshooting
+
+### Issue: Modal not showing on iOS
+Ensure CocoaPods is installed:
+```bash
+cd ios && pod install && cd ..
+```
+
+### Issue: Duplicate dialogs opening
+The library contains built-in concurrency guards (`PICKER_ALREADY_OPEN`). Ensure your state toggle is synchronized with `onConfirm` and `onCancel`.
+
+---
+
+## 24. Example Application
+
+The repository includes a complete example application under `example/`.
+
+To run:
+```bash
+# Start Metro
+cd example
+npm start
+
+# Run on iOS
+npm run ios
+
+# Run on Android
+npm run android
+```
+
+---
+
+## 25. Contributing
+
+Contributions are welcome! Please check the [CONTRIBUTING.md](file:///Users/mac-m4izonnet/Desktop/Malay/Date-Time-Picker/react-native-date-time-picker-kit/CONTRIBUTING.md) guide before submitting pull requests.
+
+---
+
+## 26. License
+
+MIT License © [Izonnet Web Solution](https://github.com/Izonnet-Web-Solution)
